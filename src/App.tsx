@@ -13,6 +13,11 @@ const MILESTONES: readonly Milestone[] = [
     status: 'done',
   },
   {
+    title: 'Modelo de datos y seed',
+    detail: 'Tipos del dominio, dinero en centavos, catálogo ficticio y pruebas en Vitest.',
+    status: 'done',
+  },
+  {
     title: 'Catálogo con variantes',
     detail: 'Productos, categorías, tallas, colores y stock por variante.',
     status: 'next',
@@ -49,7 +54,7 @@ const STATUS_STYLES: Record<MilestoneStatus, string> = {
 const HIGHLIGHTS: readonly { readonly title: string; readonly body: string }[] = [
   {
     title: 'Datos ficticios',
-    body: 'Sin pagos reales, sin envíos reales y sin integraciones con agencias. El catálogo de prueba llega en la siguiente sesión.',
+    body: 'Sin pagos reales, sin envíos reales y sin integraciones con agencias. El catálogo de prueba ya está modelado con tallas, colores y stock.',
   },
   {
     title: 'Lógica separada de React',
@@ -57,7 +62,7 @@ const HIGHLIGHTS: readonly { readonly title: string; readonly body: string }[] =
   },
   {
     title: 'Tipado sin atajos',
-    body: 'TypeScript en modo estricto, sin any y con el lint configurado para señalarlo.',
+    body: 'TypeScript en modo estricto, sin any, con el lint configurado para señalarlo y pruebas de dominio en Vitest.',
   },
 ]
 
@@ -114,7 +119,7 @@ export function App() {
             <h2 id="estado-del-proyecto" className="text-xl font-semibold tracking-tight">
               Estado del proyecto
             </h2>
-            <p className="text-sm text-stone-500">Sesión 1 de 18 · versión 0.1.0</p>
+            <p className="text-sm text-stone-500">Sesión 2 de 18 · versión 0.2.0</p>
           </div>
 
           <ol className="mt-6 divide-y divide-stone-200 overflow-hidden rounded-xl border border-stone-200 bg-white">

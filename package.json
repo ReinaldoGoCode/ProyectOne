@@ -1,6 +1,6 @@
 {
   "name": "norte-moda",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "description": "Tienda conceptual de ropa para pequeños comercios venezolanos. Proyecto de portafolio.",
@@ -16,7 +16,10 @@
     "lint": "eslint src vite.config.ts --max-warnings=0",
     "lint:fix": "eslint src vite.config.ts --fix",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "check": "tsc --noEmit && eslint src vite.config.ts --max-warnings=0 && vitest run"
   },
   "dependencies": {
     "react": "^19.3.1",
@@ -38,6 +41,7 @@
     "tailwindcss": "^4.3.3",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.71.2",
-    "vite": "^7.3.7"
+    "vite": "^7.3.7",
+    "vitest": "^5.0.5"
   }
 }

@@ -3,7 +3,8 @@
 Tienda conceptual de ropa para pequeños comercios venezolanos. Proyecto de portafolio construido
 por etapas, con datos ficticios y sin integraciones reales.
 
-> **Estado:** sesión 1 de 18 completada. Base técnica lista; el catálogo empieza en la sesión 2.
+> **Estado:** sesión 2 de 18 completada. Modelo de datos, catálogo ficticio y 42 pruebas de dominio
+> en verde; la interfaz del catálogo empieza en la sesión 3.
 
 ---
 
@@ -42,6 +43,7 @@ pago y el despacho a mano.
 | Tailwind CSS | 4.3     | Plugin oficial de Vite, sin `tailwind.config.js` |
 | ESLint       | 10.13   | Configuración plana y reglas con tipos           |
 | Prettier     | 3.9     | Formato único para TS, CSS, JSON y Markdown      |
+| Vitest       | 5.0     | Pruebas de dominio en entorno Node               |
 | pnpm         | 11.28   | Gestor de paquetes del proyecto                  |
 
 La versión de TypeScript está fijada en la rama 5.9 (`~5.9.3`) porque `typescript-eslint` declara
@@ -76,8 +78,11 @@ Vite falla en lugar de saltar a otro puerto y dejar una URL distinta a la docume
 | `pnpm lint:fix`     | ESLint con corrección automática                |
 | `pnpm format`       | Prettier sobre todo el proyecto                 |
 | `pnpm format:check` | Verifica el formato sin escribir                |
+| `pnpm test`         | Vitest una vez y termina                        |
+| `pnpm test:watch`   | Vitest en modo interactivo                      |
+| `pnpm check`        | Tipos, lint y pruebas en secuencia              |
 
-Antes de cada commit conviene ejecutar `pnpm typecheck && pnpm lint && pnpm format:check`.
+Antes de cada commit conviene ejecutar `pnpm check && pnpm format:check`.
 
 ---
 
@@ -89,14 +94,22 @@ norte-moda/
 │  ├─ 01-alcance.md          # problema, requisitos, flujos y criterios de aceptación
 │  └─ 03-decisiones.md       # registro de decisiones técnicas (ADR)
 ├─ public/
-│  └─ favicon.svg
+│  ├─ favicon.svg
+│  └─ images/products/placeholder.svg
 ├─ src/
 │  ├─ app/                   # router y providers (sesión 3 en adelante)
 │  ├─ components/ui/         # componentes reutilizables sin lógica de negocio
 │  ├─ data/
-│  │  ├─ seed/               # datos ficticios: categorías, productos, pedidos
+│  │  ├─ seed/
+│  │  │  ├─ categories.ts    # las tres categorías ficticias
+│  │  │  ├─ products.ts      # productos y expansión de variantes
+│  │  │  └─ index.ts         # seedCatalog
 │  │  └─ repositories/       # interfaces y adaptadores de persistencia
-│  ├─ domain/                # TypeScript puro: reglas de negocio y sus tests
+│  ├─ domain/
+│  │  ├─ types.ts            # Category, Product, Variant, CartLine, Order...
+│  │  ├─ money.ts            # centavos, formato es-VE, sumas y multiplicaciones
+│  │  ├─ product.ts          # stock, tallas y colores
+│  │  └─ __tests__/          # money, product y seed
 │  ├─ features/
 │  │  ├─ catalog/            # listado, filtros y búsqueda
 │  │  ├─ product/            # detalle y selector de variantes
@@ -108,7 +121,7 @@ norte-moda/
 │  ├─ lib/                   # utilidades sin estado (ids, formatos, guards)
 │  ├─ styles/
 │  │  └─ index.css           # Tailwind y tokens de diseño
-│  ├─ App.tsx                # pantalla provisional de la sesión 1
+│  ├─ App.tsx                # pantalla provisional hasta la sesión 3
 │  ├─ main.tsx               # punto de entrada
 │  └─ vite-env.d.ts
 ├─ eslint.config.js
@@ -136,6 +149,39 @@ El detalle de cada decisión y su motivo está en [`docs/03-decisiones.md`](docs
 
 ---
 
+## Modelo de datos
+
+| Entidad            | Qué representa                                                        |
+| ------------------ | --------------------------------------------------------------------- |
+| `Category`         | Agrupación del catálogo; su `slug` viaja en la URL                    |
+| `Product`          | Prenda con precio en centavos, categoría y estado activo              |
+| `Variant`          | Combinación vendible de talla y color, con SKU y stock                |
+| `CartLine`         | Solo `variantId` y cantidad; el precio se resuelve contra el catálogo |
+| `Order`            | Pedido con datos del comprador, totales y dos ejes de estado          |
+| `OrderItem`        | Línea congelada: nombre, talla, color y precio del momento de compra  |
+| `OrderStatusEvent` | Cambio de estado de pago o de entrega, con fecha y nota               |
+
+Reglas que sostienen el modelo:
+
+- El dinero se guarda en centavos enteros y solo se formatea al mostrarlo.
+- El carrito no guarda precios; el pedido sí los congela.
+- Pago y entrega son estados independientes, no un único `status`.
+- Los identificadores de producto son su `slug`; el de cada variante se deriva del producto, el
+  color y la talla, de modo que el seed no repita datos a mano.
+
+## Pruebas
+
+`pnpm test` ejecuta 42 pruebas en tres archivos, con Vitest en entorno Node:
+
+- `money.test.ts`: formato `es-VE`, rechazo de montos inválidos y sumas sin coma flotante.
+- `product.test.ts`: búsqueda de variantes, stock, disponibilidad y listados para la interfaz.
+- `seed.test.ts`: integridad del catálogo (ids, SKU, categorías, precios y stock).
+
+Se prueba el dominio, no los componentes: todavía no hay interfaz que probar y las reglas son la
+parte que más conviene blindar. Las pruebas de UI llegan cuando exista el flujo de compra.
+
+---
+
 ## Criterios de código
 
 - `strict` activo, más `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`,
@@ -144,6 +190,7 @@ El detalle de cada decisión y su motivo está en [`docs/03-decisiones.md`](docs
 - Importaciones de tipos con `import type` (`verbatimModuleSyntax`).
 - Dinero siempre en centavos enteros. Nunca `number` con decimales para precios.
 - Componentes pequeños y con una sola responsabilidad; la lógica pesada va a `domain/`.
+- Cada regla de dominio nueva llega con su prueba; `pnpm check` las corre todas.
 - Textos de interfaz y nombres de dominio en español; nombres de API técnica en inglés cuando
   corresponda.
 
@@ -151,7 +198,7 @@ El detalle de cada decisión y su motivo está en [`docs/03-decisiones.md`](docs
 
 - Ramas por etapa: `feat/sesion-01-base`, `feat/sesion-02-modelo-datos`, etc.
 - Commits convencionales en español: `feat:`, `fix:`, `chore:`, `docs:`, `test:`, `refactor:`.
-- `main` siempre compila: `build`, `lint` y `format:check` en verde.
+- `main` siempre compila: `build`, `lint`, `test` y `format:check` en verde.
 
 ## Datos y privacidad
 
@@ -160,8 +207,8 @@ real es coincidencia. No se recogen datos de usuarios ni se envía información 
 
 ## Próxima sesión
 
-Sesión 2: modelo de datos (`src/domain/types.ts`), utilidades de dinero en centavos, seed de
-categorías y productos con variantes, y los primeros tests con Vitest.
+Sesión 3: layout real, rutas con `react-router-dom`, portada con productos destacados y página 404.
+El catálogo navegable llega en la sesión 4.
 
 ## Licencia
 

@@ -16,6 +16,8 @@ decisión cambia, no cuando se implementa algo obvio.
 | ADR-009 | `App.tsx` es una pantalla provisional                       | 2026-10-19 |
 | ADR-010 | Dinero en centavos enteros                                  | 2026-10-19 |
 | ADR-011 | Pago y entrega como dos ejes de estado                      | 2026-10-19 |
+| ADR-012 | Vitest en entorno Node y configuración compartida con Vite  | 2026-10-19 |
+| ADR-013 | Seed declarativo con ids y SKU derivados                    | 2026-10-19 |
 
 ---
 
@@ -119,8 +121,8 @@ estricto. Las reglas se ajustan solo con una razón documentada aquí.
 **Decisión.** `react-router-dom` y `vitest` se agregan en las sesiones que los necesitan (3 y 2,
 respectivamente).
 
-**Consecuencia.** La base no tiene dependencias muertas. La estructura de carpetas ya reserva el
-lugar de cada pieza.
+**Consecuencia.** La base no tiene dependencias muertas. Vitest entró en la sesión 2 y
+`react-router-dom` entrará en la 3. La estructura de carpetas ya reserva el lugar de cada pieza.
 
 ---
 
@@ -158,3 +160,34 @@ propio grafo de transiciones válidas e historial compartido.
 
 **Consecuencia.** No existen estados combinados artificiales. La interfaz debe mostrar ambos ejes
 por separado y el dominio debe rechazar transiciones inválidas con tests.
+
+---
+
+## ADR-012 · Vitest en entorno Node y configuración compartida con Vite
+
+**Contexto.** Las reglas de dinero, stock y estados son la parte con más riesgo y no dependen del
+DOM. Probar componentes ahora no aportaría nada: todavía no hay pantallas.
+
+**Decisión.** Vitest 5 con `environment: 'node'` y `test.include` limitado a `src/**/*.test.ts`. La
+configuración vive en `vite.config.ts` usando `defineConfig` de `vitest/config`, para compartir el
+alias y los plugins con el build.
+
+**Consecuencia.** Un solo archivo de configuración y pruebas que corren en menos de un segundo.
+Contrapartida: `vite.config.ts` importa `vitest/config`, una dependencia de desarrollo, así que el
+build necesita instalar `devDependencies` (lo normal en CI). Si eso se vuelve un problema, se separa
+en `vitest.config.ts`.
+
+---
+
+## ADR-013 · Seed declarativo con ids y SKU derivados
+
+**Contexto.** Diez productos con tres o cuatro tallas por color producen más de ochenta variantes.
+Escribirlas a mano invita a duplicados y a SKU inconsistentes.
+
+**Decisión.** Cada producto declara colores y stock por talla; una función constructora expande a
+`Variant[]` con id derivado (`producto-color-talla`) y SKU (`NM-CODIGO-COLOR-TALLA`). El id del
+producto es su slug.
+
+**Consecuencia.** El seed se lee como una ficha de producto y no como una tabla. Los tests verifican
+la unicidad de ids y SKU. Cambiar un slug cambia los identificadores del seed; en la fase Supabase
+los ids serán UUID y el pedido ya congela los datos que importan.

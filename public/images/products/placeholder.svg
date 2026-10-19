@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1000" role="img" aria-label="Imagen de referencia de la prenda">
+  <rect width="800" height="1000" fill="#f6e7d7" />
+  <circle cx="400" cy="330" r="190" fill="#ecd0b4" />
+  <path
+    d="M258 352 366 296q34 34 68 0l108 56 62 168-96 42-22-62v320H314V500l-22 62-96-42z"
+    fill="#c27540"
+  />
+  <path d="M330 296q70 62 140 0" fill="none" stroke="#8a462a" stroke-width="14" stroke-linecap="round" />
+  <rect x="330" y="812" width="140" height="10" rx="5" fill="#a95b32" />
+</svg>
