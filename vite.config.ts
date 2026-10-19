@@ -20,6 +20,6 @@ export default defineConfig({
   test: {
     // La lógica de dominio no toca el DOM: no hace falta jsdom.
     environment: 'node',
-    include: ['src/**/*.test.ts'],
+    include: ['src/**/*.test.{ts,tsx}'],
   },
 })

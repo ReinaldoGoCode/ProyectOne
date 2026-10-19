@@ -1,6 +1,6 @@
 {
   "name": "norte-moda",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
   "description": "Tienda conceptual de ropa para pequeños comercios venezolanos. Proyecto de portafolio.",
@@ -23,7 +23,8 @@
   },
   "dependencies": {
     "react": "^19.3.1",
-    "react-dom": "^19.3.1"
+    "react-dom": "^19.3.1",
+    "react-router-dom": "^7.18.4"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

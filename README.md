@@ -3,8 +3,10 @@
 Tienda conceptual de ropa para pequeños comercios venezolanos. Proyecto de portafolio construido
 por etapas, con datos ficticios y sin integraciones reales.
 
-> **Estado:** sesión 2 de 18 completada. Modelo de datos, catálogo ficticio y 42 pruebas de dominio
-> en verde; la interfaz del catálogo empieza en la sesión 3.
+> **Estado:** sesión 3 de 18 completada. Layout real, rutas, portada y 404 publicados. El catálogo
+> navegable con filtros llega en la sesión 4.
+
+**En vivo:** <https://reinaldogocode.github.io/ProyectOne/>
 
 ---
 
@@ -40,10 +42,11 @@ pago y el despacho a mano.
 | React        | 19.3    | Sin framework meta; Vite como bundler            |
 | TypeScript   | 5.9     | Modo `strict` más comprobaciones extra           |
 | Vite         | 7.3     | Alias `@/` hacia `src/`                          |
+| React Router | 7.18    | Router de datos con `basename` desde Vite        |
 | Tailwind CSS | 4.3     | Plugin oficial de Vite, sin `tailwind.config.js` |
 | ESLint       | 10.13   | Configuración plana y reglas con tipos           |
 | Prettier     | 3.9     | Formato único para TS, CSS, JSON y Markdown      |
-| Vitest       | 5.0     | Pruebas de dominio en entorno Node               |
+| Vitest       | 5.0     | Pruebas de dominio y humo de interfaz            |
 | pnpm         | 11.28   | Gestor de paquetes del proyecto                  |
 
 La versión de TypeScript está fijada en la rama 5.9 (`~5.9.3`) porque `typescript-eslint` declara
@@ -102,6 +105,7 @@ real al recargar.
 
 ```text
 norte-moda/
+├─ .github/workflows/deploy.yml
 ├─ docs/
 │  ├─ 01-alcance.md          # problema, requisitos, flujos y criterios de aceptación
 │  └─ 03-decisiones.md       # registro de decisiones técnicas (ADR)
@@ -109,32 +113,32 @@ norte-moda/
 │  ├─ favicon.svg
 │  └─ images/products/placeholder.svg
 ├─ src/
-│  ├─ app/                   # router y providers (sesión 3 en adelante)
-│  ├─ components/ui/         # componentes reutilizables sin lógica de negocio
+│  ├─ app/
+│  │  ├─ layouts/StoreLayout.tsx   # cabecera, contenido, pie y restauración de scroll
+│  │  └─ router.tsx                # rutas y basename según el entorno
+│  ├─ components/
+│  │  ├─ layout/                   # SiteHeader y SiteFooter
+│  │  └─ ui/                       # GarmentArt, ProductCard y estilos de botón
 │  ├─ data/
-│  │  ├─ seed/
-│  │  │  ├─ categories.ts    # las tres categorías ficticias
-│  │  │  ├─ products.ts      # productos y expansión de variantes
-│  │  │  └─ index.ts         # seedCatalog
-│  │  └─ repositories/       # interfaces y adaptadores de persistencia
-│  ├─ domain/
-│  │  ├─ types.ts            # Category, Product, Variant, CartLine, Order...
-│  │  ├─ money.ts            # centavos, formato es-VE, sumas y multiplicaciones
-│  │  ├─ product.ts          # stock, tallas y colores
-│  │  └─ __tests__/          # money, product y seed
+│  │  ├─ seed/                     # categorías, productos y variantes ficticias
+│  │  └─ repositories/             # interfaces y adaptadores de persistencia
+│  ├─ domain/                      # TypeScript puro: tipos, dinero y stock
+│  │  ├─ types.ts
+│  │  ├─ money.ts
+│  │  ├─ product.ts
+│  │  └─ __tests__/
 │  ├─ features/
-│  │  ├─ catalog/            # listado, filtros y búsqueda
-│  │  ├─ product/            # detalle y selector de variantes
-│  │  ├─ cart/               # carrito
-│  │  ├─ checkout/           # formulario y creación del pedido
-│  │  ├─ order-tracking/     # consulta de pedido por código
-│  │  └─ admin/              # productos, pedidos y resumen
-│  ├─ hooks/                 # hooks compartidos
-│  ├─ lib/                   # utilidades sin estado (ids, formatos, guards)
-│  ├─ styles/
-│  │  └─ index.css           # Tailwind y tokens de diseño
-│  ├─ App.tsx                # pantalla provisional hasta la sesión 3
-│  ├─ main.tsx               # punto de entrada
+│  │  ├─ home/                     # Hero, selección, relato y proceso
+│  │  ├─ not-found/                # página 404
+│  │  ├─ catalog/                  # sesión 4
+│  │  ├─ product/                  # sesión 5
+│  │  ├─ cart/                     # sesiones 6 y 7
+│  │  ├─ checkout/                 # sesiones 8 a 10
+│  │  └─ admin/                    # sesiones 11 a 16
+│  ├─ hooks/
+│  ├─ lib/                         # colores de la interfaz y rutas base
+│  ├─ styles/index.css             # Tailwind, tokens y animaciones
+│  ├─ main.tsx
 │  └─ vite-env.d.ts
 ├─ eslint.config.js
 ├─ index.html
@@ -144,8 +148,8 @@ norte-moda/
 └─ vite.config.ts
 ```
 
-Las carpetas todavía vacías llevan un `.gitkeep` para que Git las conserve. Cada una recibe
-contenido en la sesión que le corresponde; no hay módulos de relleno.
+Las carpetas que todavía no tienen contenido llevan un `.gitkeep`. Cada una recibe su código en la
+sesión que le corresponde; no hay módulos de relleno.
 
 ### Por qué esta separación
 
@@ -153,13 +157,31 @@ contenido en la sesión que le corresponde; no hay módulos de relleno.
   estado, y ahí se concentran los tests.
 - `data/repositories/` aísla el acceso a datos. Cambiar `localStorage` por Supabase será agregar un
   adaptador, no reescribir pantallas.
-- `features/` agrupa por capacidad de negocio, no por tipo de archivo. Todo lo del carrito vive
-  junto.
+- `features/` agrupa por capacidad de negocio, no por tipo de archivo.
 - `components/ui/` es presentacional puro, reutilizable entre tienda y panel.
+- `lib/` contiene utilidades sin estado que no son dominio: colores de presentación, enlaces base.
 
-El detalle de cada decisión y su motivo está en [`docs/03-decisiones.md`](docs/03-decisiones.md).
+El detalle de cada decisión está en [`docs/03-decisiones.md`](docs/03-decisiones.md).
 
 ---
+
+## Diseño de interfaz
+
+La interfaz sigue un criterio editorial y minimalista, con la jerarquía y el movimiento como
+herramientas principales:
+
+- **Tipografía.** Una sola familia del sistema, sin fuentes externas. La jerarquía se construye con
+  tamaño, peso, interletrado negativo en titulares y versalitas espaciadas para los rótulos.
+- **Color.** Papel cálido (`--color-paper`), tinta (`--color-ink`), arena (`--color-sand`) y una
+  escala terracota de marca. Los tokens viven en `src/styles/index.css`, no en valores sueltos.
+- **Espacio.** Contenedor de 6xl, secciones con 80–112 px de aire y separadores de 1 px al 6–10 %.
+- **Movimiento.** Entradas `rise` y `fade` con easing suave y retardos escalonados; botones con
+  `active:scale-[0.97]`, subrayado progresivo en la navegación y una hamburguesa que se convierte en
+  cruz. Todo se desactiva con `prefers-reduced-motion`.
+- **Imágenes.** Siluetas SVG por categoría y color, sin red ni fotos de stock. Son un sustituto
+  temporal de la fotografía y se reemplazan cuando exista material real.
+- **Responsive.** Verificado a 390 px y 1440 px sin desbordamiento horizontal. En móvil la navegación
+  se resuelve con un menú desplegable accesible.
 
 ## Modelo de datos
 
@@ -179,18 +201,19 @@ Reglas que sostienen el modelo:
 - El carrito no guarda precios; el pedido sí los congela.
 - Pago y entrega son estados independientes, no un único `status`.
 - Los identificadores de producto son su `slug`; el de cada variante se deriva del producto, el
-  color y la talla, de modo que el seed no repita datos a mano.
+  color y la talla.
 
 ## Pruebas
 
-`pnpm test` ejecuta 42 pruebas en tres archivos, con Vitest en entorno Node:
+`pnpm test` ejecuta 44 pruebas en cuatro archivos, con Vitest en entorno Node:
 
 - `money.test.ts`: formato `es-VE`, rechazo de montos inválidos y sumas sin coma flotante.
 - `product.test.ts`: búsqueda de variantes, stock, disponibilidad y listados para la interfaz.
 - `seed.test.ts`: integridad del catálogo (ids, SKU, categorías, precios y stock).
+- `home-page.test.tsx`: renderizado de la portada con datos del seed y de la página 404.
 
-Se prueba el dominio, no los componentes: todavía no hay interfaz que probar y las reglas son la
-parte que más conviene blindar. Las pruebas de UI llegan cuando exista el flujo de compra.
+Las pruebas de interfaz usan `renderToStaticMarkup`: verifican que la página renderiza y contiene lo
+esperado, sin necesidad de un DOM simulado. Las pruebas de interacción llegan con el flujo de compra.
 
 ---
 
@@ -219,8 +242,8 @@ real es coincidencia. No se recogen datos de usuarios ni se envía información 
 
 ## Próxima sesión
 
-Sesión 3: layout real, rutas con `react-router-dom`, portada con productos destacados y página 404.
-El catálogo navegable llega en la sesión 4.
+Sesión 4: página de catálogo con grilla de productos, filtro por categoría en la URL, búsqueda y
+orden. Las tarjetas pasan a ser enlaces cuando exista la ficha de producto.
 
 ## Licencia
 

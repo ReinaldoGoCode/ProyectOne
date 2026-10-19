@@ -18,6 +18,8 @@ decisión cambia, no cuando se implementa algo obvio.
 | ADR-011 | Pago y entrega como dos ejes de estado                      | 2026-10-19 |
 | ADR-012 | Vitest en entorno Node y configuración compartida con Vite  | 2026-10-19 |
 | ADR-013 | Seed declarativo con ids y SKU derivados                    | 2026-10-19 |
+| ADR-014 | Router con base dinámica y enlaces de sección               | 2026-10-19 |
+| ADR-015 | Sistema visual propio con siluetas SVG                      | 2026-10-19 |
 
 ---
 
@@ -122,7 +124,7 @@ estricto. Las reglas se ajustan solo con una razón documentada aquí.
 respectivamente).
 
 **Consecuencia.** La base no tiene dependencias muertas. Vitest entró en la sesión 2 y
-`react-router-dom` entrará en la 3. La estructura de carpetas ya reserva el lugar de cada pieza.
+`react-router-dom` en la 3. La estructura de carpetas ya reserva el lugar de cada pieza.
 
 ---
 
@@ -133,8 +135,8 @@ respectivamente).
 **Decisión.** Una pantalla informativa con el estado del proyecto y los hitos por etapa, sin
 productos ni botones que aparenten funcionalidad inexistente.
 
-**Consecuencia.** No hay componentes de relleno ni enlaces muertos. La pantalla se reemplaza en la
-sesión 3, cuando exista el layout real.
+**Consecuencia.** No hay componentes de relleno ni enlaces muertos. La pantalla se reemplazó en la
+sesión 3 por el layout real y la portada.
 
 ---
 
@@ -166,11 +168,12 @@ por separado y el dominio debe rechazar transiciones inválidas con tests.
 ## ADR-012 · Vitest en entorno Node y configuración compartida con Vite
 
 **Contexto.** Las reglas de dinero, stock y estados son la parte con más riesgo y no dependen del
-DOM. Probar componentes ahora no aportaría nada: todavía no hay pantallas.
+DOM. En la sesión 2 todavía no había pantallas que probar.
 
-**Decisión.** Vitest 5 con `environment: 'node'` y `test.include` limitado a `src/**/*.test.ts`. La
-configuración vive en `vite.config.ts` usando `defineConfig` de `vitest/config`, para compartir el
-alias y los plugins con el build.
+**Decisión.** Vitest 5 con `environment: 'node'` y `test.include` limitado a
+`src/**/*.test.{ts,tsx}`. La configuración vive en `vite.config.ts` usando `defineConfig` de
+`vitest/config`, para compartir el alias y los plugins con el build. La interfaz se prueba con
+`renderToStaticMarkup`, sin DOM simulado.
 
 **Consecuencia.** Un solo archivo de configuración y pruebas que corren en menos de un segundo.
 Contrapartida: `vite.config.ts` importa `vitest/config`, una dependencia de desarrollo, así que el
@@ -191,3 +194,37 @@ producto es su slug.
 **Consecuencia.** El seed se lee como una ficha de producto y no como una tabla. Los tests verifican
 la unicidad de ids y SKU. Cambiar un slug cambia los identificadores del seed; en la fase Supabase
 los ids serán UUID y el pedido ya congela los datos que importan.
+
+---
+
+## ADR-014 · Router con base dinámica y enlaces de sección
+
+**Contexto.** En GitHub Pages el sitio vive bajo `/ProyectOne/`, mientras que en desarrollo vive en
+`/`. Además, la navegación por anclas (`#seleccion`) solo funcionaba en la portada: desde la página
+404 no llevaba a ninguna parte.
+
+**Decisión.** `createBrowserRouter` con `basename` derivado de `import.meta.env.BASE_URL`, y un
+helper `sectionHref(id)` que construye `${BASE_URL}#${id}` para que las anclas funcionen desde
+cualquier ruta. El layout incluye `ScrollRestoration`.
+
+**Consecuencia.** Los mismos enlaces funcionan en local y en Pages, y desde la 404 llevan a la
+portada con la sección enfocada. Verificado: con el ancla `#seleccion` la página queda con la sección
+a 96 px del borde superior, descontando la cabecera fija. Si cambia la ruta de publicación, se ajusta
+una sola variable de entorno.
+
+---
+
+## ADR-015 · Sistema visual propio con siluetas SVG
+
+**Contexto.** El proyecto no tiene fotografía ni presupuesto para imágenes de stock, y no quiere
+depender de fuentes o CDN externos para verse bien. La interfaz debía sentirse cuidada desde la
+primera sesión de diseño.
+
+**Decisión.** Un sistema visual mínimo con tokens en CSS (papel, tinta, arena y escala terracota),
+tipografía del sistema con jerarquía por tamaño y tracking, animaciones CSS con
+`prefers-reduced-motion`, y siluetas SVG por categoría que toman el color real de la variante. Sin
+librería de UI.
+
+**Consecuencia.** Cero peticiones visuales externas y control total del bundle (31 kB de CSS y 342 kB
+de JS, 108 kB gzip). Las siluetas son un sustituto temporal de la fotografía: cuando existan fotos,
+`GarmentArt` se reemplaza por una imagen sin tocar el resto del layout.
