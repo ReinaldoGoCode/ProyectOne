@@ -1,0 +1,24 @@
+# Dependencias
+node_modules/
+
+# Build y artefactos
+dist/
+coverage/
+.vite/
+
+# Entorno local
+.env
+.env.*
+!.env.example
+*.local
+
+# Sistema operativo y editores
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*

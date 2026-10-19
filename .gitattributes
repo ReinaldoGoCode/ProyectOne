@@ -1,0 +1,11 @@
+# Normaliza los finales de línea a LF en todos los archivos de texto.
+# Evita diferencias entre Windows, macOS y Linux, y que Prettier falle
+# al clonar el repositorio en otra máquina.
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.woff binary
+*.woff2 binary

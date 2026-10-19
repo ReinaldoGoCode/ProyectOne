@@ -1,0 +1,15 @@
+# Configuración de pnpm a nivel de workspace.
+# A partir de pnpm 11 las opciones globales viven aquí y no en package.json.
+
+# `hoisted` produce una node_modules plana, equivalente a npm. El linker
+# aislado por defecto crea junctions que en este entorno de Windows no
+# resuelven correctamente (los módulos no se encuentran al ejecutar binarios).
+nodeLinker: hoisted
+
+# Estos paquetes traen su binario nativo como dependencia opcional de
+# plataforma, así que su script de instalación no es necesario. Lo marcamos
+# como no permitido de forma explícita para que la instalación sea
+# determinista y no dependa de poder lanzar procesos hijos.
+allowBuilds:
+  esbuild: false
+  '@tailwindcss/oxide': false
