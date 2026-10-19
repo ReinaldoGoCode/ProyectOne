@@ -138,3 +138,56 @@ export function getTotalStock(variants: readonly Variant[], productId: ProductId
     0,
   )
 }
+
+export interface VariantSelection {
+  readonly size: Size
+  readonly color: string
+}
+
+/**
+ * Selección inicial de la ficha: la primera combinación con stock en el orden
+ * en que el catálogo declara colores y tallas. Devuelve `null` si todo está
+ * agotado.
+ */
+export function findFirstAvailableSelection(
+  variants: readonly Variant[],
+  productId: ProductId,
+): VariantSelection | null {
+  const [first] = getProductVariants(variants, productId).filter((variant) => variant.stock > 0)
+
+  return first ? { size: first.size, color: first.color } : null
+}
+
+/** Tallas con stock para un color concreto, en orden canónico. */
+export function getAvailableSizesForColor(
+  variants: readonly Variant[],
+  productId: ProductId,
+  color: string,
+): readonly Size[] {
+  const sizes = new Set<Size>()
+
+  for (const variant of getProductVariants(variants, productId)) {
+    if (variant.color === color && variant.stock > 0) {
+      sizes.add(variant.size)
+    }
+  }
+
+  return [...sizes].sort((a, b) => SIZE_ORDER.indexOf(a) - SIZE_ORDER.indexOf(b))
+}
+
+/** Colores con stock para una talla concreta, ordenados alfabéticamente. */
+export function getAvailableColorsForSize(
+  variants: readonly Variant[],
+  productId: ProductId,
+  size: Size,
+): readonly string[] {
+  const colors = new Set<string>()
+
+  for (const variant of getProductVariants(variants, productId)) {
+    if (variant.size === size && variant.stock > 0) {
+      colors.add(variant.color)
+    }
+  }
+
+  return [...colors].sort((a, b) => a.localeCompare(b, 'es'))
+}

@@ -21,6 +21,7 @@ describe('página de catálogo', () => {
     expect(html).toContain('Toda la colección')
     expect(html).toContain('20 piezas')
     expect(html).toContain('Camisa de lino Margarita')
+    expect(html).toContain('href="/producto/camisa-lino-margarita"')
     expect(html).not.toContain('Pantalón wide leg Valencia')
   })
 

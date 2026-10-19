@@ -45,7 +45,7 @@ function garmentDetail(categoryId: CategoryId): string {
  */
 export function GarmentArt({ categoryId, color, className }: GarmentArtProps) {
   const fill = colorToHex(color)
-  const stroke = isLightColor(color) ? 'rgba(28, 25, 23, 0.16)' : 'rgba(28, 25, 23, 0.08)'
+  const stroke = isLightColor(color) ? 'rgba(28, 25, 23, 0.28)' : 'rgba(28, 25, 23, 0.08)'
   const detailStroke = isLightColor(color) ? 'rgba(28, 25, 23, 0.22)' : 'rgba(255, 255, 255, 0.38)'
 
   return (
@@ -57,6 +57,7 @@ export function GarmentArt({ categoryId, color, className }: GarmentArtProps) {
         stroke={stroke}
         strokeWidth={1.5}
         strokeLinejoin="round"
+        className="transition-[fill] duration-500 ease-out"
       />
       <path
         d={garmentDetail(categoryId)}

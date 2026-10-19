@@ -3,8 +3,9 @@
 Tienda conceptual de ropa para pequeños comercios venezolanos. Proyecto de portafolio construido
 por etapas, con datos ficticios y sin integraciones reales.
 
-> **Estado:** sesión 4 de 18 completada. Catálogo con filtros, búsqueda y orden publicados sobre 21
-> prendas y 6 categorías. La ficha de producto llega en la sesión 5.
+> **Estado:** sesión 5 de 18 completada. Ficha de producto con selector de talla y color, stock por
+> variante y módulo de WhatsApp listo. La confirmación de pedido llega con el carrito y el checkout
+> (sesiones 6 a 10).
 
 **En vivo:** <https://reinaldogocode.github.io/ProyectOne/>
 
@@ -97,10 +98,10 @@ Cada push a `main` ejecuta `.github/workflows/deploy.yml`: instala dependencias,
 Pages sirve el proyecto bajo el nombre del repositorio, así que el workflow define
 `VITE_BASE_PATH=/ProyectOne/`. En local la variable no existe y la aplicación vive en `/`.
 
-Como Pages no permite reescribir rutas, el workflow publica `/catalogo` como archivo estático
-(`dist/catalogo/index.html`) para que el enlace directo responda 200, y copia `index.html` a
-`404.html` para que cualquier otra ruta profunda renderice la aplicación. Esas otras rutas siguen
-respondiendo con estado 404, una limitación de Pages que no afecta la navegación interna.
+Como Pages no permite reescribir rutas, el build copia `index.html` a `/catalogo` y a cada
+`/producto/:slug`, de modo que esos enlaces directos respondan 200. El workflow copia además
+`index.html` a `404.html` para que cualquier otra ruta profunda renderice la aplicación; esas rutas
+siguen respondiendo con estado 404, una limitación de Pages que no afecta la navegación interna.
 
 ## Catálogo
 
@@ -116,6 +117,36 @@ los filtros en la URL:
 Los tres se combinan: `/catalogo?categoria=vestidos&orden=precio-asc`. Cada cambio usa `replace` para
 no llenar el historial y `preventScrollReset` para no saltar mientras se escribe. La búsqueda recorre
 nombre, descripción, categoría y colores de las variantes.
+
+## Ficha de producto
+
+`/producto/:slug` muestra la prenda, el precio, la composición, los cuidados y la selección de talla
+y color. Las tarjetas del catálogo ya enlazan aquí.
+
+- La selección vive en la URL (`?talla=M&color=Negro`), así que se puede compartir y recargar.
+- Las tallas agotadas para el color elegido se deshabilitan con `disabled` y se tachan; los colores
+  sin stock en ninguna talla también.
+- Al cambiar de color, si la talla actual no existe, se elige la primera talla disponible.
+- La silueta de la prenda toma el color de la variante y el stock se anuncia con `aria-live`.
+- Si todo está agotado, la acción de WhatsApp se desactiva y la página lo explica.
+
+## WhatsApp
+
+[`src/lib/whatsapp.ts`](src/lib/whatsapp.ts) concentra los mensajes y enlaces, sin API oficial ni
+automatización:
+
+- `buildProductInquiryMessage` y `buildProductInquiryUrl` arman la consulta de una prenda con talla,
+  color y precio.
+- `buildOrderMessage` y `buildOrderWhatsAppUrl` arman el pedido completo: código, cliente, líneas,
+  pago, entrega, total y nota opcional.
+- `STORE_WHATSAPP_NUMBER` es un número ficticio y el único lugar donde vive.
+- `encodeURIComponent` escapa saltos de línea, acentos, `#` y cualquier carácter que rompería la URL.
+
+La ficha usa `WhatsAppActions`: acción principal prominente, botón secundario para copiar el mensaje
+y confirmación visual al copiar. Si el navegador bloquea el portapapeles, se muestra el mensaje
+completo en un campo de solo lectura para copiarlo a mano. El mismo componente recibirá el mensaje del
+pedido en la confirmación y el seguimiento, cuando esas pantallas existan. No se creó una
+confirmación ficticia: los pedidos reales llegan con el carrito y el checkout.
 
 ---
 
@@ -136,26 +167,26 @@ norte-moda/
 │  │  └─ router.tsx                # rutas y basename según el entorno
 │  ├─ components/
 │  │  ├─ layout/                   # SiteHeader y SiteFooter
-│  │  └─ ui/                       # GarmentArt, ProductCard y estilos de botón
+│  │  └─ ui/                       # GarmentArt, ProductCard, WhatsAppActions y botones
 │  ├─ data/
 │  │  ├─ seed/                     # categorías, productos y variantes ficticias
 │  │  └─ repositories/             # interfaces y adaptadores de persistencia
 │  ├─ domain/                      # TypeScript puro: tipos, dinero, stock y filtros
 │  │  ├─ types.ts
 │  │  ├─ money.ts
-│  │  ├─ product.ts
+│  │  ├─ product.ts                # stock, combinaciones y selección de variantes
 │  │  ├─ catalog.ts                # búsqueda, filtro por categoría y orden
 │  │  └─ __tests__/
 │  ├─ features/
 │  │  ├─ home/                     # Hero, selección, relato y proceso
 │  │  ├─ not-found/                # página 404
 │  │  ├─ catalog/                  # grilla, controles y estado en la URL
-│  │  ├─ product/                  # sesión 5
+│  │  ├─ product/                  # ficha, selector de variantes y stock
 │  │  ├─ cart/                     # sesiones 6 y 7
 │  │  ├─ checkout/                 # sesiones 8 a 10
 │  │  └─ admin/                    # sesiones 11 a 16
 │  ├─ hooks/                       # useDocumentTitle
-│  ├─ lib/                         # colores de la interfaz y rutas base
+│  ├─ lib/                         # colores, rutas base y whatsapp.ts
 │  ├─ styles/index.css             # Tailwind, tokens y animaciones
 │  ├─ main.tsx
 │  └─ vite-env.d.ts
@@ -229,17 +260,20 @@ Reglas que sostienen el modelo:
 
 ## Pruebas
 
-`pnpm test` ejecuta 62 pruebas en seis archivos, con Vitest en entorno Node:
+`pnpm test` ejecuta 81 pruebas en ocho archivos, con Vitest en entorno Node:
 
 - `money.test.ts`: formato `es-VE`, rechazo de montos inválidos y sumas sin coma flotante.
-- `product.test.ts`: búsqueda de variantes, stock, disponibilidad y listados para la interfaz.
+- `product.test.ts`: variantes, stock, disponibilidad y selección inicial.
 - `seed.test.ts`: integridad del catálogo (ids, SKU, categorías, precios y stock).
 - `catalog.test.ts`: filtro por categoría, búsqueda sin acentos, orden y conteos.
+- `whatsapp.test.ts`: mensaje de pedido, consulta de prenda, escapado y números inválidos.
 - `home-page.test.tsx`: renderizado de la portada con datos del seed y de la página 404.
 - `catalog-page.test.tsx`: grilla completa, filtro por URL, búsqueda, orden y estado vacío.
+- `product-page.test.tsx`: ficha, selección por URL, combinaciones agotadas y producto inexistente.
 
 Las pruebas de interfaz usan `renderToStaticMarkup`: verifican que la página renderiza y contiene lo
-esperado, sin necesidad de un DOM simulado. Las pruebas de interacción llegan con el flujo de compra.
+esperado, sin necesidad de un DOM simulado. Las interacciones de variantes se verificaron además en
+Chrome headless contra el servidor de desarrollo y el sitio publicado.
 
 ---
 
@@ -270,8 +304,9 @@ ninguna tienda. No se recogen datos de usuarios ni se envía información a serv
 
 ## Próxima sesión
 
-Sesión 5: ficha de producto en `/producto/:slug`, con selector de talla y color, stock por variante y
-estado agotado. Ahí las tarjetas del catálogo pasan a ser enlaces.
+Sesión 6: estado del carrito con reducer puro, cantidades y totales, con pruebas. Después, checkout y
+creación de pedido para poder montar el mensaje de WhatsApp de pedido en la confirmación y el
+seguimiento.
 
 ## Licencia
 

@@ -2,7 +2,10 @@ import { describe, expect, it } from 'vitest'
 
 import {
   canAddQuantity,
+  findFirstAvailableSelection,
   findVariant,
+  getAvailableColorsForSize,
+  getAvailableSizesForColor,
   getStockForSelection,
   getTotalStock,
   isCombinationAvailable,
@@ -137,5 +140,28 @@ describe('listados para la interfaz', () => {
 
   it('suma el stock de todas las variantes del producto', () => {
     expect(getTotalStock(VARIANTS, PRODUCT_ID)).toBe(7)
+  })
+})
+
+describe('selección inicial y combinaciones disponibles', () => {
+  it('elige la primera combinación con stock en el orden del catálogo', () => {
+    expect(findFirstAvailableSelection(VARIANTS, PRODUCT_ID)).toEqual({
+      size: 'S',
+      color: 'Negro',
+    })
+  })
+
+  it('devuelve null cuando todas las combinaciones están agotadas', () => {
+    expect(findFirstAvailableSelection(VARIANTS, 'producto-agotado')).toBeNull()
+  })
+
+  it('lista las tallas con stock para un color', () => {
+    expect(getAvailableSizesForColor(VARIANTS, PRODUCT_ID, 'Blanco')).toEqual(['S', 'Único'])
+    expect(getAvailableSizesForColor(VARIANTS, PRODUCT_ID, 'Negro')).toEqual(['S'])
+  })
+
+  it('lista los colores con stock para una talla', () => {
+    expect(getAvailableColorsForSize(VARIANTS, PRODUCT_ID, 'S')).toEqual(['Blanco', 'Negro'])
+    expect(getAvailableColorsForSize(VARIANTS, PRODUCT_ID, 'M')).toEqual([])
   })
 })

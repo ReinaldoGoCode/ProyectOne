@@ -23,6 +23,9 @@ decisión cambia, no cuando se implementa algo obvio.
 | ADR-016 | Filtros del catálogo como estado de la URL                  | 2026-10-19 |
 | ADR-017 | Catálogo verosímil sin copiar una marca                     | 2026-10-19 |
 | ADR-018 | Reglas de Apple HIG aplicadas al catálogo                   | 2026-10-19 |
+| ADR-019 | WhatsApp por enlace profundo, sin API ni automatización     | 2026-10-19 |
+| ADR-020 | Selección de variantes en la URL y stock deshabilitado      | 2026-10-19 |
+| ADR-021 | No inventar una confirmación de pedido para WhatsApp        | 2026-10-19 |
 
 ---
 
@@ -280,3 +283,52 @@ texto secundario sobre papel de 4.6:1 o más; y `prefers-reduced-motion` respeta
 **Consecuencia.** La pantalla se comporta como un catálogo de plataforma: el foco se queda en el
 campo mientras se filtra, el estado activo no depende solo del color y el resultado se anuncia con
 `aria-live`. Verificado a 390 px y 1440 px, con foco conservado tras escribir y sin desbordamiento.
+
+---
+
+## ADR-019 · WhatsApp por enlace profundo, sin API ni automatización
+
+**Contexto.** WhatsApp es el canal real de estos comercios, pero la automatización oficial queda fuera
+de alcance. Hacía falta un puente simple entre la tienda y la conversación, sin backend ni claves.
+
+**Decisión.** Un módulo puro (`src/lib/whatsapp.ts`) que construye el texto con el markdown de
+WhatsApp (`*negrita*`) y devuelve `https://wa.me/<número>?text=<mensaje>` usando `encodeURIComponent`.
+Dos entradas: consulta de una prenda y pedido completo (código, cliente, líneas congeladas, pago,
+entrega y total). El número ficticio vive en una sola constante. La interfaz es `WhatsAppActions`:
+acción principal prominente, botón para copiar, confirmación visual y, si el portapapeles está
+bloqueado, el mensaje en un campo de solo lectura para copiarlo a mano.
+
+**Consecuencia.** Funciona en móvil y escritorio sin API, sin credenciales y sin coste. El mensaje de
+pedido queda cubierto por pruebas y listo para la confirmación; hoy solo se usa la consulta de prenda
+porque todavía no existen pedidos.
+
+---
+
+## ADR-020 · Selección de variantes en la URL y stock deshabilitado
+
+**Contexto.** AC-01 exige que las combinaciones agotadas se muestren deshabilitadas y no se puedan
+elegir. Además, una selección de talla y color es compartible y debería sobrevivir a la recarga.
+
+**Decisión.** `talla` y `color` viven en la URL (`?talla=M&color=Negro`) con `replace`. La selección
+inicial es la primera combinación con stock en el orden del catálogo. Las tallas se deshabilitan para
+el color elegido; los colores sin stock en ninguna talla se deshabilitan. Al cambiar de color, si la
+talla actual no existe, se elige la primera disponible. El stock se anuncia con `aria-live`.
+
+**Consecuencia.** Nunca se llega a una combinación inválida y la ficha se puede compartir con la
+variante exacta. Un producto totalmente agotado deja la acción de WhatsApp deshabilitada.
+
+---
+
+## ADR-021 · No inventar una confirmación de pedido para WhatsApp
+
+**Contexto.** Se pidió integrar el envío por WhatsApp en la página de éxito y en la consulta por
+código. Esas pantallas dependen del carrito, el checkout y la persistencia de pedidos, que llegan en
+las sesiones 6 a 10 y todavía no existen.
+
+**Decisión.** Entregar el módulo y el componente completos, integrarlos en la ficha de producto con
+una consulta real y dejar el mensaje de pedido probado y listo. No se crea una confirmación con un
+pedido inventado ni una consulta por código vacía.
+
+**Consecuencia.** La interfaz no promete nada que no pueda cumplir. Falta un cambio pequeño cuando
+exista el pedido: pasar `buildOrderWhatsAppUrl(order)` a `WhatsAppActions` en la confirmación y el
+seguimiento. Adelantar el carrito y el checkout es el siguiente paso natural.

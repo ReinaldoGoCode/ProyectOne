@@ -4,6 +4,7 @@ import { StoreLayout } from '@/app/layouts/StoreLayout'
 import { CatalogPage } from '@/features/catalog/CatalogPage'
 import { HomePage } from '@/features/home/HomePage'
 import { NotFoundPage } from '@/features/not-found/NotFoundPage'
+import { ProductPage } from '@/features/product/ProductPage'
 
 /**
  * En GitHub Pages el sitio vive bajo `/ProyectOne/`, así que el router toma
@@ -21,6 +22,7 @@ const router = createBrowserRouter(
       children: [
         { index: true, element: <HomePage /> },
         { path: 'catalogo', element: <CatalogPage /> },
+        { path: 'producto/:slug', element: <ProductPage /> },
         { path: '*', element: <NotFoundPage /> },
       ],
     },
