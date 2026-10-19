@@ -4,16 +4,16 @@ import { seedCatalog } from '@/data/seed'
 import { isValidCents } from '@/domain/money'
 
 describe('seed del catálogo', () => {
-  it('incluye tres categorías con identificadores y slugs únicos', () => {
-    expect(seedCatalog.categories).toHaveLength(3)
-    expect(new Set(seedCatalog.categories.map((category) => category.id)).size).toBe(3)
-    expect(new Set(seedCatalog.categories.map((category) => category.slug)).size).toBe(3)
+  it('incluye seis categorías con identificadores y slugs únicos', () => {
+    expect(seedCatalog.categories).toHaveLength(6)
+    expect(new Set(seedCatalog.categories.map((category) => category.id)).size).toBe(6)
+    expect(new Set(seedCatalog.categories.map((category) => category.slug)).size).toBe(6)
   })
 
-  it('incluye diez productos con identificadores y slugs únicos', () => {
-    expect(seedCatalog.products).toHaveLength(10)
-    expect(new Set(seedCatalog.products.map((product) => product.id)).size).toBe(10)
-    expect(new Set(seedCatalog.products.map((product) => product.slug)).size).toBe(10)
+  it('incluye veintiún productos con identificadores y slugs únicos', () => {
+    expect(seedCatalog.products).toHaveLength(21)
+    expect(new Set(seedCatalog.products.map((product) => product.id)).size).toBe(21)
+    expect(new Set(seedCatalog.products.map((product) => product.slug)).size).toBe(21)
   })
 
   it('solo referencia categorías que existen', () => {

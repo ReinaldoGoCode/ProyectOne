@@ -1,8 +1,11 @@
 import { Link } from 'react-router-dom'
 
 import { buttonClassName } from '@/components/ui/button'
+import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 
 export function NotFoundPage() {
+  useDocumentTitle('Página no encontrada · Norte Moda')
+
   return (
     <section className="mx-auto flex w-full max-w-3xl flex-col items-center px-5 py-24 text-center sm:px-8 sm:py-36">
       <p className="text-[11px] font-medium tracking-[0.22em] text-brand-700 uppercase">
@@ -12,8 +15,8 @@ export function NotFoundPage() {
         Esto no está en el perchero.
       </h1>
       <p className="mt-6 max-w-md text-base leading-relaxed text-stone-600">
-        La página que buscás no existe o cambió de lugar. Podés volver al inicio y seguir mirando la
-        selección.
+        La página que buscas no existe o cambió de lugar. Puedes volver al inicio y seguir mirando
+        la selección.
       </p>
       <Link to="/" className={buttonClassName('primary', 'mt-9')}>
         Volver al inicio

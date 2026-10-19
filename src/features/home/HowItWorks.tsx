@@ -1,10 +1,10 @@
 const STEPS = [
   {
-    title: 'Elegí talla y color',
+    title: 'Elige talla y color',
     body: 'Cada prenda muestra las combinaciones que existen y el stock real, sin sorpresas al confirmar.',
   },
   {
-    title: 'Dejá tus datos',
+    title: 'Deja tus datos',
     body: 'Nombre, teléfono y dirección. Sin crear cuenta ni recordar contraseñas.',
   },
   {

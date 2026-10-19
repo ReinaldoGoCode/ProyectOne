@@ -5,7 +5,7 @@ import type { CategoryId, Product, Size, Variant } from '@/domain/types'
  *
  * Cada producto se declara una sola vez con sus colores y el stock por talla.
  * El constructor expande esa declaración a variantes con id y SKU estables,
- * para no escribir a mano más de ochenta combinaciones.
+ * para no escribir a mano más de 150 combinaciones.
  */
 
 interface SizeStock {
@@ -155,10 +155,80 @@ const SEED_ENTRIES: readonly SeedEntry[] = [
     ],
   }),
   buildEntry({
+    code: 'BLU01',
+    slug: 'blusa-satinada-caroni',
+    name: 'Blusa satinada Caroní',
+    categoryId: 'camisas',
+    description: 'Blusa de satén con cuello redondo y manga corta. Cae suelta sin pegarse.',
+    composition: '100 % poliéster satinado.',
+    care: 'Lavar a mano con agua fría. Planchar a baja temperatura.',
+    priceCents: 2600,
+    active: true,
+    createdAt: '2026-09-08T14:00:00.000Z',
+    colors: [
+      {
+        color: 'Marfil',
+        sizes: [
+          { size: 'S', stock: 3 },
+          { size: 'M', stock: 5 },
+          { size: 'L', stock: 4 },
+        ],
+      },
+      {
+        color: 'Verde salvia',
+        sizes: [
+          { size: 'S', stock: 2 },
+          { size: 'M', stock: 3 },
+          { size: 'L', stock: 3 },
+        ],
+      },
+      {
+        color: 'Negro',
+        sizes: [
+          { size: 'S', stock: 2 },
+          { size: 'M', stock: 4 },
+          { size: 'L', stock: 2 },
+        ],
+      },
+    ],
+  }),
+  buildEntry({
+    code: 'CAM03',
+    slug: 'camisa-cuadros-andes',
+    name: 'Camisa de cuadros Andes',
+    categoryId: 'camisas',
+    description: 'Camisa de cuadros en algodón ligero, corte relajado y bolsillo frontal.',
+    composition: '100 % algodón.',
+    care: 'Lavar en frío. Secar a la sombra. Planchar a temperatura media.',
+    priceCents: 3000,
+    active: true,
+    createdAt: '2026-09-15T14:00:00.000Z',
+    colors: [
+      {
+        color: 'Rojo vino',
+        sizes: [
+          { size: 'S', stock: 3 },
+          { size: 'M', stock: 4 },
+          { size: 'L', stock: 3 },
+          { size: 'XL', stock: 1 },
+        ],
+      },
+      {
+        color: 'Azul denim',
+        sizes: [
+          { size: 'S', stock: 2 },
+          { size: 'M', stock: 4 },
+          { size: 'L', stock: 2 },
+          { size: 'XL', stock: 1 },
+        ],
+      },
+    ],
+  }),
+  buildEntry({
     code: 'FRA01',
     slug: 'franela-pique-coro',
     name: 'Franela piqué Coro',
-    categoryId: 'camisas',
+    categoryId: 'camisetas',
     description: 'Franela de piqué con cuello camisero. Básico de todos los días.',
     composition: '95 % algodón, 5 % elastano.',
     care: 'Lavar a máquina en ciclo suave. Secar a la sombra.',
@@ -182,6 +252,79 @@ const SEED_ENTRIES: readonly SeedEntry[] = [
           { size: 'M', stock: 6 },
           { size: 'L', stock: 5 },
           { size: 'XL', stock: 2 },
+        ],
+      },
+    ],
+  }),
+  buildEntry({
+    code: 'CAMI01',
+    slug: 'camiseta-basica-pampatar',
+    name: 'Camiseta básica Pampatar',
+    categoryId: 'camisetas',
+    description: 'Camiseta de algodón peinado, cuello redondo y corte recto.',
+    composition: '100 % algodón peinado.',
+    care: 'Lavar a máquina en frío con colores similares.',
+    priceCents: 1400,
+    active: true,
+    createdAt: '2026-07-20T14:00:00.000Z',
+    colors: [
+      {
+        color: 'Blanco',
+        sizes: [
+          { size: 'S', stock: 6 },
+          { size: 'M', stock: 8 },
+          { size: 'L', stock: 7 },
+          { size: 'XL', stock: 4 },
+        ],
+      },
+      {
+        color: 'Negro',
+        sizes: [
+          { size: 'S', stock: 5 },
+          { size: 'M', stock: 7 },
+          { size: 'L', stock: 6 },
+          { size: 'XL', stock: 3 },
+        ],
+      },
+      {
+        color: 'Arena',
+        sizes: [
+          { size: 'S', stock: 4 },
+          { size: 'M', stock: 5 },
+          { size: 'L', stock: 4 },
+          { size: 'XL', stock: 2 },
+        ],
+      },
+    ],
+  }),
+  buildEntry({
+    code: 'TOP01',
+    slug: 'top-punto-lecheria',
+    name: 'Top de punto Lechería',
+    categoryId: 'camisetas',
+    description: 'Top de punto acanalado con tirantes finos y escote cuadrado.',
+    composition: '92 % algodón, 8 % elastano.',
+    care: 'Lavar a mano. Secar en plano.',
+    priceCents: 1800,
+    active: true,
+    createdAt: '2026-08-30T14:00:00.000Z',
+    colors: [
+      {
+        color: 'Negro',
+        sizes: [
+          { size: 'XS', stock: 3 },
+          { size: 'S', stock: 4 },
+          { size: 'M', stock: 3 },
+          { size: 'L', stock: 2 },
+        ],
+      },
+      {
+        color: 'Chocolate',
+        sizes: [
+          { size: 'XS', stock: 2 },
+          { size: 'S', stock: 3 },
+          { size: 'M', stock: 2 },
+          { size: 'L', stock: 1 },
         ],
       },
     ],
@@ -290,6 +433,36 @@ const SEED_ENTRIES: readonly SeedEntry[] = [
     ],
   }),
   buildEntry({
+    code: 'VES04',
+    slug: 'vestido-camisero-cumarebo',
+    name: 'Vestido camisero Cumarebo',
+    categoryId: 'vestidos',
+    description: 'Vestido camisero de lino con cinturón, botones y bolsillos.',
+    composition: '70 % lino, 30 % viscosa.',
+    care: 'Lavar a mano. Planchar húmedo.',
+    priceCents: 4000,
+    active: true,
+    createdAt: '2026-09-22T14:00:00.000Z',
+    colors: [
+      {
+        color: 'Azul cielo',
+        sizes: [
+          { size: 'S', stock: 3 },
+          { size: 'M', stock: 4 },
+          { size: 'L', stock: 2 },
+        ],
+      },
+      {
+        color: 'Arena',
+        sizes: [
+          { size: 'S', stock: 2 },
+          { size: 'M', stock: 3 },
+          { size: 'L', stock: 2 },
+        ],
+      },
+    ],
+  }),
+  buildEntry({
     code: 'PAN01',
     slug: 'pantalon-palazzo-merida',
     name: 'Pantalón palazzo Mérida',
@@ -386,6 +559,38 @@ const SEED_ENTRIES: readonly SeedEntry[] = [
     ],
   }),
   buildEntry({
+    code: 'PAN05',
+    slug: 'pantalon-sastre-barquisimeto',
+    name: 'Pantalón sastre Barquisimeto',
+    categoryId: 'pantalones',
+    description: 'Pantalón sastre de pinza frontal y pierna recta.',
+    composition: '68 % poliéster, 30 % viscosa, 2 % elastano.',
+    care: 'Lavar en frío. Colgar para secar.',
+    priceCents: 3800,
+    active: true,
+    createdAt: '2026-09-05T14:00:00.000Z',
+    colors: [
+      {
+        color: 'Negro',
+        sizes: [
+          { size: 'S', stock: 3 },
+          { size: 'M', stock: 5 },
+          { size: 'L', stock: 4 },
+          { size: 'XL', stock: 2 },
+        ],
+      },
+      {
+        color: 'Gris',
+        sizes: [
+          { size: 'S', stock: 2 },
+          { size: 'M', stock: 3 },
+          { size: 'L', stock: 3 },
+          { size: 'XL', stock: 1 },
+        ],
+      },
+    ],
+  }),
+  buildEntry({
     code: 'PAN04',
     slug: 'pantalon-wide-leg-valencia',
     name: 'Pantalón wide leg Valencia',
@@ -413,6 +618,160 @@ const SEED_ENTRIES: readonly SeedEntry[] = [
           { size: 'M', stock: 0 },
           { size: 'L', stock: 0 },
           { size: 'XL', stock: 0 },
+        ],
+      },
+    ],
+  }),
+  buildEntry({
+    code: 'FAL01',
+    slug: 'falda-midi-tucacas',
+    name: 'Falda midi Tucacas',
+    categoryId: 'faldas',
+    description: 'Falda midi de cintura alta con abertura lateral.',
+    composition: '100 % viscosa.',
+    care: 'Lavar a mano con agua fría. Secar en plano.',
+    priceCents: 3200,
+    active: true,
+    createdAt: '2026-08-18T14:00:00.000Z',
+    colors: [
+      {
+        color: 'Negro',
+        sizes: [
+          { size: 'S', stock: 3 },
+          { size: 'M', stock: 4 },
+          { size: 'L', stock: 3 },
+        ],
+      },
+      {
+        color: 'Beige',
+        sizes: [
+          { size: 'S', stock: 2 },
+          { size: 'M', stock: 3 },
+          { size: 'L', stock: 2 },
+        ],
+      },
+    ],
+  }),
+  buildEntry({
+    code: 'FAL02',
+    slug: 'falda-plisada-porlamar',
+    name: 'Falda plisada Porlamar',
+    categoryId: 'faldas',
+    description: 'Falda plisada de vuelo suave y elástico en la cintura.',
+    composition: '100 % poliéster.',
+    care: 'Lavar a mano. No planchar los pliegues.',
+    priceCents: 3400,
+    active: true,
+    createdAt: '2026-09-12T14:00:00.000Z',
+    colors: [
+      {
+        color: 'Verde oliva',
+        sizes: [
+          { size: 'XS', stock: 2 },
+          { size: 'S', stock: 3 },
+          { size: 'M', stock: 3 },
+          { size: 'L', stock: 2 },
+        ],
+      },
+      {
+        color: 'Negro',
+        sizes: [
+          { size: 'XS', stock: 2 },
+          { size: 'S', stock: 4 },
+          { size: 'M', stock: 3 },
+          { size: 'L', stock: 2 },
+        ],
+      },
+    ],
+  }),
+  buildEntry({
+    code: 'FAL03',
+    slug: 'falda-lino-macuto',
+    name: 'Falda de lino Macuto',
+    categoryId: 'faldas',
+    description: 'Falda de lino con cintura elástica y bolsillos laterales.',
+    composition: '100 % lino.',
+    care: 'Lavar a mano. Planchar húmedo.',
+    priceCents: 3000,
+    active: true,
+    createdAt: '2026-07-28T14:00:00.000Z',
+    colors: [
+      {
+        color: 'Arena',
+        sizes: [
+          { size: 'S', stock: 3 },
+          { size: 'M', stock: 4 },
+          { size: 'L', stock: 3 },
+        ],
+      },
+      {
+        color: 'Blanco',
+        sizes: [
+          { size: 'S', stock: 2 },
+          { size: 'M', stock: 3 },
+          { size: 'L', stock: 2 },
+        ],
+      },
+    ],
+  }),
+  buildEntry({
+    code: 'CHA01',
+    slug: 'chaqueta-denim-la-guaira',
+    name: 'Chaqueta denim La Guaira',
+    categoryId: 'chaquetas',
+    description: 'Chaqueta de denim rígido, corte oversize y bolsillos frontales.',
+    composition: '100 % algodón.',
+    care: 'Lavar en frío del revés. Secar a la sombra.',
+    priceCents: 4800,
+    active: true,
+    createdAt: '2026-08-08T14:00:00.000Z',
+    colors: [
+      {
+        color: 'Azul medio',
+        sizes: [
+          { size: 'S', stock: 2 },
+          { size: 'M', stock: 4 },
+          { size: 'L', stock: 3 },
+        ],
+      },
+      {
+        color: 'Negro',
+        sizes: [
+          { size: 'S', stock: 2 },
+          { size: 'M', stock: 3 },
+          { size: 'L', stock: 2 },
+        ],
+      },
+    ],
+  }),
+  buildEntry({
+    code: 'CHA02',
+    slug: 'chaqueta-lino-choroni',
+    name: 'Chaqueta de lino Choroní',
+    categoryId: 'chaquetas',
+    description: 'Chaqueta ligera de lino para las noches frescas.',
+    composition: '100 % lino.',
+    care: 'Lavar a mano. Planchar del revés.',
+    priceCents: 4500,
+    active: true,
+    createdAt: '2026-09-20T14:00:00.000Z',
+    colors: [
+      {
+        color: 'Arena',
+        sizes: [
+          { size: 'S', stock: 3 },
+          { size: 'M', stock: 4 },
+          { size: 'L', stock: 3 },
+          { size: 'XL', stock: 1 },
+        ],
+      },
+      {
+        color: 'Blanco',
+        sizes: [
+          { size: 'S', stock: 2 },
+          { size: 'M', stock: 3 },
+          { size: 'L', stock: 2 },
+          { size: 'XL', stock: 1 },
         ],
       },
     ],

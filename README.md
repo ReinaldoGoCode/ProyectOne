@@ -3,8 +3,8 @@
 Tienda conceptual de ropa para pequeños comercios venezolanos. Proyecto de portafolio construido
 por etapas, con datos ficticios y sin integraciones reales.
 
-> **Estado:** sesión 3 de 18 completada. Layout real, rutas, portada y 404 publicados. El catálogo
-> navegable con filtros llega en la sesión 4.
+> **Estado:** sesión 4 de 18 completada. Catálogo con filtros, búsqueda y orden publicados sobre 21
+> prendas y 6 categorías. La ficha de producto llega en la sesión 5.
 
 **En vivo:** <https://reinaldogocode.github.io/ProyectOne/>
 
@@ -99,6 +99,21 @@ Pages sirve el proyecto bajo el nombre del repositorio, así que el workflow def
 workflow además copia `index.html` a `404.html` para que las rutas del cliente no devuelvan un 404
 real al recargar.
 
+## Catálogo
+
+`/catalogo` lista las 20 piezas activas (la vigésimo primera está desactivada) y guarda el estado de
+los filtros en la URL:
+
+| Parámetro   | Valores                                                | Ejemplo               |
+| ----------- | ------------------------------------------------------ | --------------------- |
+| `categoria` | slug de la categoría                                   | `?categoria=vestidos` |
+| `q`         | texto libre, sin distinguir acentos                    | `?q=lino`             |
+| `orden`     | `novedades` (por defecto), `precio-asc`, `precio-desc` | `?orden=precio-asc`   |
+
+Los tres se combinan: `/catalogo?categoria=vestidos&orden=precio-asc`. Cada cambio usa `replace` para
+no llenar el historial y `preventScrollReset` para no saltar mientras se escribe. La búsqueda recorre
+nombre, descripción, categoría y colores de las variantes.
+
 ---
 
 ## Estructura
@@ -122,20 +137,21 @@ norte-moda/
 │  ├─ data/
 │  │  ├─ seed/                     # categorías, productos y variantes ficticias
 │  │  └─ repositories/             # interfaces y adaptadores de persistencia
-│  ├─ domain/                      # TypeScript puro: tipos, dinero y stock
+│  ├─ domain/                      # TypeScript puro: tipos, dinero, stock y filtros
 │  │  ├─ types.ts
 │  │  ├─ money.ts
 │  │  ├─ product.ts
+│  │  ├─ catalog.ts                # búsqueda, filtro por categoría y orden
 │  │  └─ __tests__/
 │  ├─ features/
 │  │  ├─ home/                     # Hero, selección, relato y proceso
 │  │  ├─ not-found/                # página 404
-│  │  ├─ catalog/                  # sesión 4
+│  │  ├─ catalog/                  # grilla, controles y estado en la URL
 │  │  ├─ product/                  # sesión 5
 │  │  ├─ cart/                     # sesiones 6 y 7
 │  │  ├─ checkout/                 # sesiones 8 a 10
 │  │  └─ admin/                    # sesiones 11 a 16
-│  ├─ hooks/
+│  ├─ hooks/                       # useDocumentTitle
 │  ├─ lib/                         # colores de la interfaz y rutas base
 │  ├─ styles/index.css             # Tailwind, tokens y animaciones
 │  ├─ main.tsx
@@ -182,6 +198,11 @@ herramientas principales:
   temporal de la fotografía y se reemplazan cuando exista material real.
 - **Responsive.** Verificado a 390 px y 1440 px sin desbordamiento horizontal. En móvil la navegación
   se resuelve con un menú desplegable accesible.
+- **Guías de Apple.** Se instaló el skill `apple-design` y se aplicaron sus reglas para este tipo de
+  pantalla: búsqueda que arranca al escribir con icono y botón de limpiar (`search-fields.md › Best
+practices`), scope bar para acotar por categoría, grilla estándar con padding suficiente
+  (`collections.md › Best practices`), movimiento breve solo en acciones explícitas
+  (`motion.md › Best practices`) y áreas táctiles de 44 pt.
 
 ## Modelo de datos
 
@@ -205,12 +226,14 @@ Reglas que sostienen el modelo:
 
 ## Pruebas
 
-`pnpm test` ejecuta 44 pruebas en cuatro archivos, con Vitest en entorno Node:
+`pnpm test` ejecuta 62 pruebas en seis archivos, con Vitest en entorno Node:
 
 - `money.test.ts`: formato `es-VE`, rechazo de montos inválidos y sumas sin coma flotante.
 - `product.test.ts`: búsqueda de variantes, stock, disponibilidad y listados para la interfaz.
 - `seed.test.ts`: integridad del catálogo (ids, SKU, categorías, precios y stock).
+- `catalog.test.ts`: filtro por categoría, búsqueda sin acentos, orden y conteos.
 - `home-page.test.tsx`: renderizado de la portada con datos del seed y de la página 404.
+- `catalog-page.test.tsx`: grilla completa, filtro por URL, búsqueda, orden y estado vacío.
 
 Las pruebas de interfaz usan `renderToStaticMarkup`: verifican que la página renderiza y contiene lo
 esperado, sin necesidad de un DOM simulado. Las pruebas de interacción llegan con el flujo de compra.
@@ -237,13 +260,15 @@ esperado, sin necesidad de un DOM simulado. Las pruebas de interacción llegan c
 
 ## Datos y privacidad
 
-Todos los productos, precios, clientes y pedidos son inventados. Cualquier parecido con un comercio
-real es coincidencia. No se recogen datos de usuarios ni se envía información a servicios externos.
+Todos los productos, precios, clientes y pedidos son inventados. La taxonomía y los rangos de precio
+se inspiran en tiendas de ropa de tamaño medio; los nombres, descripciones, precios y combinaciones
+son propios de Norte Moda. No se copiaron productos ni marcas, y el proyecto no está afiliado a
+ninguna tienda. No se recogen datos de usuarios ni se envía información a servicios externos.
 
 ## Próxima sesión
 
-Sesión 4: página de catálogo con grilla de productos, filtro por categoría en la URL, búsqueda y
-orden. Las tarjetas pasan a ser enlaces cuando exista la ficha de producto.
+Sesión 5: ficha de producto en `/producto/:slug`, con selector de talla y color, stock por variante y
+estado agotado. Ahí las tarjetas del catálogo pasan a ser enlaces.
 
 ## Licencia
 

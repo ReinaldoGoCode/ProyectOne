@@ -1,6 +1,8 @@
+import { Link } from 'react-router-dom'
+
 import { sectionHref } from '@/lib/paths'
 
-const FOOTER_LINKS = [
+const SECTION_LINKS = [
   { id: 'seleccion', label: 'Selección' },
   { id: 'tienda', label: 'La tienda' },
   { id: 'como-funciona', label: 'Cómo funciona' },
@@ -31,11 +33,19 @@ export function SiteFooter() {
 
           <nav aria-label="Pie de página">
             <ul className="flex flex-wrap gap-x-10 gap-y-2 text-sm">
-              {FOOTER_LINKS.map((link) => (
+              <li>
+                <Link
+                  to="/catalogo"
+                  className="inline-block py-1 text-stone-600 transition-colors duration-200 hover:text-ink"
+                >
+                  Catálogo
+                </Link>
+              </li>
+              {SECTION_LINKS.map((link) => (
                 <li key={link.id}>
                   <a
                     href={sectionHref(link.id)}
-                    className="text-stone-600 transition-colors duration-200 hover:text-ink"
+                    className="inline-block py-1 text-stone-600 transition-colors duration-200 hover:text-ink"
                   >
                     {link.label}
                   </a>

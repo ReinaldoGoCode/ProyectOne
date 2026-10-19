@@ -20,6 +20,9 @@ decisión cambia, no cuando se implementa algo obvio.
 | ADR-013 | Seed declarativo con ids y SKU derivados                    | 2026-10-19 |
 | ADR-014 | Router con base dinámica y enlaces de sección               | 2026-10-19 |
 | ADR-015 | Sistema visual propio con siluetas SVG                      | 2026-10-19 |
+| ADR-016 | Filtros del catálogo como estado de la URL                  | 2026-10-19 |
+| ADR-017 | Catálogo verosímil sin copiar una marca                     | 2026-10-19 |
+| ADR-018 | Reglas de Apple HIG aplicadas al catálogo                   | 2026-10-19 |
 
 ---
 
@@ -225,6 +228,55 @@ tipografía del sistema con jerarquía por tamaño y tracking, animaciones CSS c
 `prefers-reduced-motion`, y siluetas SVG por categoría que toman el color real de la variante. Sin
 librería de UI.
 
-**Consecuencia.** Cero peticiones visuales externas y control total del bundle (31 kB de CSS y 342 kB
-de JS, 108 kB gzip). Las siluetas son un sustituto temporal de la fotografía: cuando existan fotos,
-`GarmentArt` se reemplaza por una imagen sin tocar el resto del layout.
+**Consecuencia.** Cero peticiones visuales externas y control total del bundle (≈37 kB de CSS y
+≈359 kB de JS, 112 kB gzip). Las siluetas son un sustituto temporal de la fotografía: cuando existan
+fotos, `GarmentArt` se reemplaza por una imagen sin tocar el resto del layout.
+
+---
+
+## ADR-016 · Filtros del catálogo como estado de la URL
+
+**Contexto.** El catálogo necesita categoría, búsqueda y orden. Guardarlos solo en `useState` haría
+que una recarga o un enlace compartido perdieran el contexto, y el botón Atrás no reflejaría lo que
+la persona ve.
+
+**Decisión.** `categoria`, `q` y `orden` son la única fuente de verdad y viven en la URL. Cada cambio
+usa `setSearchParams` con `replace` y `preventScrollReset`; los enlaces de categoría usan
+`preventScrollReset`. El filtrado se resuelve en `domain/catalog.ts` con `filterCatalog`, sin React.
+
+**Consecuencia.** Los enlaces son compartibles y recargables, el historial no se llena con cada
+tecla y la búsqueda conserva el foco. Con 21 productos el filtrado es inmediato. Cuando llegue
+Supabase, la URL se mantiene y el filtrado se mueve a la consulta sin cambiar el contrato visible.
+
+---
+
+## ADR-017 · Catálogo verosímil sin copiar una marca
+
+**Contexto.** Se pidió un catálogo de ropa real para dar verosimilitud al portafolio. Copiar nombres,
+descripciones, precios o fotografías de una tienda conocida implicaría riesgo de marca y derechos de
+autor, y sugeriría una afiliación que no existe.
+
+**Decisión.** Usar la taxonomía y los rangos de precio de una tienda de ropa de tamaño medio
+(camisas, camisetas, vestidos, pantalones, faldas y chaquetas) como referencia estructural, y
+escribir un catálogo original: 6 categorías, 21 prendas y más de 170 variantes con nombres de
+ciudades venezolanas, descripciones propias y precios plausibles.
+
+**Consecuencia.** El catálogo se siente real sin apropiarse de una marca. Si un cliente real entrega
+su inventario, el seed se reemplaza por sus datos y el resto de la aplicación no cambia.
+
+---
+
+## ADR-018 · Reglas de Apple HIG aplicadas al catálogo
+
+**Contexto.** El skill `apple-design` reúne las Human Interface Guidelines y un criterio de oficio.
+Para una pantalla de catálogo con búsqueda y filtros, las reglas relevantes son las de search
+fields, collections, buttons y motion.
+
+**Decisión.** Aplicar: búsqueda que empieza al escribir, con icono, placeholder y botón de limpiar;
+scope bar de categorías con recuento; grilla estándar con separación suficiente; áreas táctiles de
+44 pt; movimiento breve y solo en acciones explícitas; etiquetas de 11 px como mínimo; contraste de
+texto secundario sobre papel de 4.6:1 o más; y `prefers-reduced-motion` respetado.
+
+**Consecuencia.** La pantalla se comporta como un catálogo de plataforma: el foco se queda en el
+campo mientras se filtra, el estado activo no depende solo del color y el resultado se anuncia con
+`aria-live`. Verificado a 390 px y 1440 px, con foco conservado tras escribir y sin desbordamiento.

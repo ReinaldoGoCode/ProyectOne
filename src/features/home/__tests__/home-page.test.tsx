@@ -8,12 +8,17 @@ import { HomePage } from '../HomePage'
 
 describe('portada', () => {
   it('presenta la propuesta y las piezas destacadas del seed', () => {
-    const html = renderToStaticMarkup(<HomePage />)
+    const html = renderToStaticMarkup(
+      <MemoryRouter>
+        <HomePage />
+      </MemoryRouter>,
+    )
 
     expect(html).toContain('Pocas prendas')
     expect(html).toContain('Camisa de lino Margarita')
     expect(html).toContain('$28,00')
-    expect(html).toContain('href="/#seleccion"')
+    expect(html).toContain('href="/catalogo"')
+    expect(html).toContain('href="/#tienda"')
   })
 })
 

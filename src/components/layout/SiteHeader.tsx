@@ -1,16 +1,19 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 
 import { sectionHref } from '@/lib/paths'
 
-const NAV_LINKS = [
-  { id: 'seleccion', label: 'Selección' },
+const SECTION_LINKS = [
   { id: 'tienda', label: 'La tienda' },
   { id: 'como-funciona', label: 'Cómo funciona' },
 ] as const
 
+const NAV_LINK_CLASS = 'group relative text-[13px] transition-colors duration-200'
+
 export function SiteHeader() {
   const [menuOpen, setMenuOpen] = useState(false)
+  const { pathname } = useLocation()
+  const onCatalog = pathname.startsWith('/catalogo')
 
   return (
     <header className="sticky top-0 z-50 border-b border-stone-900/6 bg-paper/80 backdrop-blur-xl">
@@ -20,7 +23,7 @@ export function SiteHeader() {
           onClick={() => {
             setMenuOpen(false)
           }}
-          className="group flex items-center gap-2.5"
+          className="group -m-2 flex items-center gap-2.5 p-2"
           aria-label="Norte Moda, ir al inicio"
         >
           <span
@@ -33,11 +36,24 @@ export function SiteHeader() {
         </Link>
 
         <nav aria-label="Principal" className="hidden items-center gap-8 sm:flex">
-          {NAV_LINKS.map((link) => (
+          <Link
+            to="/catalogo"
+            aria-current={onCatalog ? 'page' : undefined}
+            className={`${NAV_LINK_CLASS} ${onCatalog ? 'text-ink' : 'text-stone-600 hover:text-ink'}`}
+          >
+            Catálogo
+            <span
+              aria-hidden="true"
+              className={`absolute -bottom-1.5 left-0 h-px w-full origin-left bg-ink transition-transform duration-300 ease-out ${
+                onCatalog ? 'scale-x-100' : 'scale-x-0 group-hover:scale-x-100'
+              }`}
+            />
+          </Link>
+          {SECTION_LINKS.map((link) => (
             <a
               key={link.id}
               href={sectionHref(link.id)}
-              className="group relative text-[13px] text-stone-600 transition-colors duration-200 hover:text-ink"
+              className={`${NAV_LINK_CLASS} text-stone-600 hover:text-ink`}
             >
               {link.label}
               <span
@@ -55,7 +71,7 @@ export function SiteHeader() {
           }}
           aria-expanded={menuOpen}
           aria-controls="menu-movil"
-          className="relative grid size-10 place-items-center rounded-full ring-1 ring-stone-900/10 transition-colors duration-200 hover:bg-white sm:hidden"
+          className="relative grid size-11 place-items-center rounded-full ring-1 ring-stone-900/10 transition-[background-color,transform] duration-200 hover:bg-white active:scale-95 sm:hidden"
         >
           <span className="sr-only">{menuOpen ? 'Cerrar menú' : 'Abrir menú'}</span>
           <span
@@ -80,7 +96,21 @@ export function SiteHeader() {
       >
         <nav aria-label="Principal móvil">
           <ul className="divide-y divide-stone-900/6">
-            {NAV_LINKS.map((link) => (
+            <li>
+              <Link
+                to="/catalogo"
+                onClick={() => {
+                  setMenuOpen(false)
+                }}
+                aria-current={onCatalog ? 'page' : undefined}
+                className={`block py-3.5 text-sm transition-colors ${
+                  onCatalog ? 'text-ink' : 'text-stone-700 active:text-ink'
+                }`}
+              >
+                Catálogo
+              </Link>
+            </li>
+            {SECTION_LINKS.map((link) => (
               <li key={link.id}>
                 <a
                   href={sectionHref(link.id)}

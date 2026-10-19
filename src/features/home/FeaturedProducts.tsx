@@ -1,3 +1,5 @@
+import { Link } from 'react-router-dom'
+
 import { ProductCard } from '@/components/ui/ProductCard'
 import { seedCategories, seedProducts, seedVariants } from '@/data/seed'
 import type { CategoryId, Product } from '@/domain/types'
@@ -38,12 +40,26 @@ export function FeaturedProducts() {
               Lo que se está llevando
             </h2>
           </div>
-          <p className="max-w-xs text-sm leading-relaxed text-stone-600">
-            Cuatro piezas de la temporada, elegidas por su tela y su caída.
-          </p>
+          <div className="sm:text-right">
+            <p className="max-w-xs text-sm leading-relaxed text-stone-600">
+              Cuatro piezas de la temporada, elegidas por su tela y su caída.
+            </p>
+            <Link
+              to="/catalogo"
+              className="group mt-4 inline-flex items-center gap-2 text-sm font-medium text-ink"
+            >
+              Ver todo el catálogo
+              <span
+                aria-hidden="true"
+                className="transition-transform duration-300 ease-out group-hover:translate-x-0.5"
+              >
+                →
+              </span>
+            </Link>
+          </div>
         </div>
 
-        <div className="mt-12 grid gap-x-6 gap-y-12 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-12 grid grid-cols-2 gap-x-4 gap-y-10 sm:gap-x-6 lg:grid-cols-4">
           {featured.map((product) => (
             <ProductCard
               key={product.id}

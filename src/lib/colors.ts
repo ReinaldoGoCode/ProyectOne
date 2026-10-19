@@ -6,6 +6,7 @@
 
 const COLOR_HEX: Readonly<Record<string, string>> = {
   Blanco: '#f2ede4',
+  Marfil: '#f1eadf',
   Arena: '#d8c3a3',
   Negro: '#211d1a',
   Celeste: '#b9d0e2',
@@ -13,16 +14,29 @@ const COLOR_HEX: Readonly<Record<string, string>> = {
   'Azul marino': '#2e4057',
   Terracota: '#b45f3c',
   Oliva: '#77764a',
+  'Verde oliva': '#6f7248',
+  'Verde salvia': '#8a9a7b',
   Floral: '#d9a39c',
   Khaki: '#b8a17b',
   Beige: '#d9c8ae',
   'Azul medio': '#4a6b8a',
+  'Azul denim': '#3f5f7d',
   'Azul cielo': '#a9c9dd',
+  'Rojo vino': '#7a2f38',
+  Chocolate: '#5a3b2e',
 }
 
 const FALLBACK_COLOR = '#b08968'
 
-const LIGHT_COLORS = new Set(['Blanco', 'Arena', 'Beige', 'Celeste', 'Azul cielo', 'Floral'])
+const LIGHT_COLORS = new Set([
+  'Blanco',
+  'Marfil',
+  'Arena',
+  'Beige',
+  'Celeste',
+  'Azul cielo',
+  'Floral',
+])
 
 export function colorToHex(color: string): string {
   return COLOR_HEX[color] ?? FALLBACK_COLOR

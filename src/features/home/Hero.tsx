@@ -1,3 +1,5 @@
+import { Link } from 'react-router-dom'
+
 import { GarmentArt } from '@/components/ui/GarmentArt'
 import { buttonClassName } from '@/components/ui/button'
 import { seedCategories, seedProducts } from '@/data/seed'
@@ -37,9 +39,9 @@ export function Hero() {
           </p>
 
           <div className="animate-rise mt-9 flex flex-wrap items-center gap-3 [animation-delay:180ms]">
-            <a href={sectionHref('seleccion')} className={buttonClassName()}>
-              Ver la selección
-            </a>
+            <Link to="/catalogo" className={buttonClassName()}>
+              Ver el catálogo
+            </Link>
             <a href={sectionHref('tienda')} className={buttonClassName('secondary')}>
               Conocer la tienda
             </a>
@@ -76,7 +78,7 @@ export function Hero() {
             <div className="absolute inset-x-6 -bottom-1 rounded-2xl bg-white/85 p-4 shadow-[0_24px_60px_-30px_rgba(28,25,23,0.45)] ring-1 ring-stone-900/5 backdrop-blur-md sm:inset-x-10">
               <div className="flex items-center justify-between gap-4">
                 <div className="min-w-0">
-                  <p className="text-[10px] tracking-[0.16em] text-stone-500 uppercase">
+                  <p className="text-[11px] tracking-[0.16em] text-stone-500 uppercase">
                     Camisa de lino
                   </p>
                   <p className="mt-0.5 truncate text-sm font-medium">Margarita · Terracota</p>
