@@ -9,6 +9,9 @@ por etapas, con datos ficticios y sin integraciones reales.
 
 **En vivo:** <https://reinaldogocode.github.io/ProyectOne/>
 
+**Documentación completa:** [DOCUMENTACION.md](DOCUMENTACION.md) — arquitectura, historial de
+sesiones y commits, pruebas, decisiones y limitaciones.
+
 ---
 
 ## Qué es y qué no es
