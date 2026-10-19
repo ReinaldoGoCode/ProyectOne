@@ -5,6 +5,8 @@ import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vitest/config'
 
 export default defineConfig({
+  // GitHub Pages sirve el sitio bajo /ProyectOne/. En local queda en la raíz.
+  base: process.env['VITE_BASE_PATH'] ?? '/',
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {

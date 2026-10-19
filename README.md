@@ -84,6 +84,18 @@ Vite falla en lugar de saltar a otro puerto y dejar una URL distinta a la docume
 
 Antes de cada commit conviene ejecutar `pnpm check && pnpm format:check`.
 
+## Despliegue
+
+Cada push a `main` ejecuta `.github/workflows/deploy.yml`: instala dependencias, corre
+`pnpm check`, construye el sitio y lo publica en GitHub Pages.
+
+**URL:** <https://reinaldogocode.github.io/ProyectOne/>
+
+Pages sirve el proyecto bajo el nombre del repositorio, así que el workflow define
+`VITE_BASE_PATH=/ProyectOne/`. En local la variable no existe y la aplicación vive en `/`. El
+workflow además copia `index.html` a `404.html` para que las rutas del cliente no devuelvan un 404
+real al recargar.
+
 ---
 
 ## Estructura
