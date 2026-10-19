@@ -47,6 +47,9 @@ jobs:
       - name: Copiar index.html como 404 para las rutas del cliente
         run: cp dist/index.html dist/404.html
 
+      - name: Publicar el catálogo como ruta estática
+        run: mkdir -p dist/catalogo && cp dist/index.html dist/catalogo/index.html
+
       - name: Preparar artefacto de Pages
         uses: actions/upload-pages-artifact@v3
         with:

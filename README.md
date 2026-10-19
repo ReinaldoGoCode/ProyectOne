@@ -95,9 +95,12 @@ Cada push a `main` ejecuta `.github/workflows/deploy.yml`: instala dependencias,
 **URL:** <https://reinaldogocode.github.io/ProyectOne/>
 
 Pages sirve el proyecto bajo el nombre del repositorio, así que el workflow define
-`VITE_BASE_PATH=/ProyectOne/`. En local la variable no existe y la aplicación vive en `/`. El
-workflow además copia `index.html` a `404.html` para que las rutas del cliente no devuelvan un 404
-real al recargar.
+`VITE_BASE_PATH=/ProyectOne/`. En local la variable no existe y la aplicación vive en `/`.
+
+Como Pages no permite reescribir rutas, el workflow publica `/catalogo` como archivo estático
+(`dist/catalogo/index.html`) para que el enlace directo responda 200, y copia `index.html` a
+`404.html` para que cualquier otra ruta profunda renderice la aplicación. Esas otras rutas siguen
+respondiendo con estado 404, una limitación de Pages que no afecta la navegación interna.
 
 ## Catálogo
 
