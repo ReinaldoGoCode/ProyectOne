@@ -7,7 +7,7 @@ por etapas, con datos ficticios y sin integraciones reales.
 > catálogo, carrito, checkout, consulta de pedido y administración local. Usa datos ficticios; no
 > procesa pagos ni coordina envíos reales.
 
-**Versión publicada anteriormente:** <https://reinaldogocode.github.io/ProyectOne/>. Esta copia local incluye cambios del flujo de compra que todavía no se han publicado.
+**Prueba en dispositivos:** <https://reinaldogocode.github.io/ProyectOne/>. Esta versión incluye carrito, checkout y panel demo; cada dispositivo guarda sus datos por separado.
 
 **Documentación completa:** [DOCUMENTACION.md](DOCUMENTACION.md) — arquitectura, historial de
 sesiones y commits, pruebas, decisiones y limitaciones.

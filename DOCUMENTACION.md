@@ -5,7 +5,7 @@
 >
 > **Última actualización:** 2026-10-20 · **Versión de la aplicación:** 0.5.0 · **Copia de trabajo:** esta carpeta no contiene metadatos `.git`.
 >
-> **Sitio publicado anteriormente:** <https://reinaldogocode.github.io/ProyectOne/>. Esta copia de trabajo incluye cambios locales que aún no se han publicado.
+> **Versión publicada para pruebas:** <https://reinaldogocode.github.io/ProyectOne/>. El workflow de GitHub Pages completó correctamente el despliegue del flujo de compra y del panel demo.
 >
 > **Repositorio:** <https://github.com/ReinaldoGoCode/ProyectOne>
 
@@ -597,8 +597,9 @@ versión previa. No hay credenciales ni secretos de producción en el código.
 - Panel local para productos, variantes, stock y pedidos con transiciones separadas.
 - Validación de repositorios y recuperación ante datos dañados; reinicio explícito de datos ficticios.
 - Pruebas de interacción compradora y administrativa añadidas.
-- No se generó un commit. Esta copia de trabajo no incluye `.git`, así que no se pudo comparar
-  cambios locales con un historial o rama.
+- Publicado en `main` tras las verificaciones de esta entrega. La carpeta local no incluye `.git`,
+  así que los cambios se compararon contra el árbol remoto y se publicaron en una actualización
+  atómica.
 
 ---
 
@@ -714,8 +715,10 @@ git push origin main
 ```
 
 Al ejecutar esta secuencia en un clon Git válido, un push a `main` inicia el workflow y publica en
-GitHub Pages si pasan las verificaciones. Esta copia local no incluye `.git` y no se publicó desde
-ella. Consulta la tabla de verificaciones para los resultados de esta entrega.
+GitHub Pages si pasan las verificaciones. Esta copia de trabajo no contiene metadatos `.git`, así
+que no permite consultar una rama local. El contenido de esta entrega se publicó en `main`; GitHub
+Actions verificó tipos, lint, pruebas y build, y Pages completó la publicación. Consulta la tabla
+de verificaciones para los resultados de esta entrega.
 
 ---
 
