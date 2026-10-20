@@ -2,10 +2,15 @@ import { formatMoney, multiplyCents } from '@/domain/money'
 import type { Customer, DeliveryMethod, OrderItem, PaymentMethod, Size } from '@/domain/types'
 
 /**
- * Número ficticio de la tienda en formato internacional, sin `+` ni espacios.
- * Es el único lugar donde vive: cambiarlo aquí actualiza todos los enlaces.
+ * Número de WhatsApp de la tienda, tomado de `VITE_STORE_WHATSAPP_NUMBER`.
+ * Si no está configurado, la demo no abre WhatsApp: el visitante solo puede
+ * copiar el mensaje. No se usa un número ficticio que podría ser de alguien.
  */
-export const STORE_WHATSAPP_NUMBER = '584125550134'
+export const STORE_WHATSAPP_NUMBER: string | null = normalizeWhatsAppPhone(
+  import.meta.env.VITE_STORE_WHATSAPP_NUMBER ?? '',
+)
+
+export const IS_WHATSAPP_CONFIGURED = STORE_WHATSAPP_NUMBER !== null
 
 const WHATSAPP_BASE_URL = 'https://wa.me'
 
@@ -19,6 +24,17 @@ const DELIVERY_LABELS: Readonly<Record<DeliveryMethod, string>> = {
   delivery_local: 'Delivery local',
   envio_nacional: 'Envío nacional',
   retiro: 'Retiro en tienda',
+}
+
+/** Deja solo dígitos y valida un largo internacional razonable. */
+export function normalizeWhatsAppPhone(phone: string): string | null {
+  const digits = phone.replace(/\D/g, '')
+
+  if (digits.length < 8 || digits.length > 15) {
+    return null
+  }
+
+  return digits
 }
 
 export interface OrderWhatsAppInput {
@@ -103,23 +119,23 @@ export function buildProductInquiryMessage(input: ProductInquiryInput): string {
 }
 
 /**
- * Genera un enlace `wa.me` con el texto escapado. `encodeURIComponent` cubre
- * saltos de línea, acentos, `#` y cualquier carácter que rompería la URL.
+ * Genera un enlace `wa.me` con el texto escapado. Exige el número de forma
+ * explícita para que ningún flujo abra un WhatsApp sin configurar.
  */
-export function buildWhatsAppUrl(message: string, phone: string = STORE_WHATSAPP_NUMBER): string {
-  const normalizedPhone = phone.replace(/\D/g, '')
+export function buildWhatsAppUrl(message: string, phone: string): string {
+  const normalizedPhone = normalizeWhatsAppPhone(phone)
 
-  if (normalizedPhone.length < 8) {
+  if (normalizedPhone === null) {
     throw new RangeError(`El número de WhatsApp no es válido. Recibido: ${phone}`)
   }
 
   return `${WHATSAPP_BASE_URL}/${normalizedPhone}?text=${encodeURIComponent(message)}`
 }
 
-export function buildOrderWhatsAppUrl(input: OrderWhatsAppInput): string {
-  return buildWhatsAppUrl(buildOrderMessage(input))
+export function buildOrderWhatsAppUrl(input: OrderWhatsAppInput, phone: string): string {
+  return buildWhatsAppUrl(buildOrderMessage(input), phone)
 }
 
-export function buildProductInquiryUrl(input: ProductInquiryInput): string {
-  return buildWhatsAppUrl(buildProductInquiryMessage(input))
+export function buildProductInquiryUrl(input: ProductInquiryInput, phone: string): string {
+  return buildWhatsAppUrl(buildProductInquiryMessage(input), phone)
 }

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 
+import { useCart } from '@/app/providers/cartContext'
 import { sectionHref } from '@/lib/paths'
 
 const SECTION_LINKS = [
@@ -12,6 +13,7 @@ const NAV_LINK_CLASS = 'group relative text-[13px] transition-colors duration-20
 
 export function SiteHeader() {
   const [menuOpen, setMenuOpen] = useState(false)
+  const { summary } = useCart()
   const { pathname } = useLocation()
   const onCatalog = pathname.startsWith('/catalogo')
 
@@ -48,6 +50,17 @@ export function SiteHeader() {
                 onCatalog ? 'scale-x-100' : 'scale-x-0 group-hover:scale-x-100'
               }`}
             />
+          </Link>
+          <Link
+            to="/carrito"
+            aria-current={pathname.startsWith('/carrito') ? 'page' : undefined}
+            className={`${NAV_LINK_CLASS} text-stone-600 hover:text-ink`}
+          >
+            Carrito{' '}
+            <span aria-label={`${String(summary.itemCount)} artículos`}>({summary.itemCount})</span>
+          </Link>
+          <Link to="/admin" className={`${NAV_LINK_CLASS} text-stone-600 hover:text-ink`}>
+            Demo admin
           </Link>
           {SECTION_LINKS.map((link) => (
             <a
@@ -108,6 +121,29 @@ export function SiteHeader() {
                 }`}
               >
                 Catálogo
+              </Link>
+            </li>
+            <li>
+              <Link
+                to="/carrito"
+                onClick={() => {
+                  setMenuOpen(false)
+                }}
+                aria-current={pathname.startsWith('/carrito') ? 'page' : undefined}
+                className="block py-3.5 text-sm text-stone-700 transition-colors active:text-ink"
+              >
+                Carrito ({summary.itemCount})
+              </Link>
+            </li>
+            <li>
+              <Link
+                to="/admin"
+                onClick={() => {
+                  setMenuOpen(false)
+                }}
+                className="block py-3.5 text-sm text-stone-700 transition-colors active:text-ink"
+              >
+                Panel demo
               </Link>
             </li>
             {SECTION_LINKS.map((link) => (

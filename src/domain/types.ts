@@ -79,7 +79,6 @@ export type DeliveryMethod = 'delivery_local' | 'envio_nacional' | 'retiro'
 export interface Customer {
   readonly firstName: string
   readonly lastName: string
-  readonly idNumber: string
   readonly phone: string
   /** Sin correo si el comprador no lo dejó. */
   readonly email: string | null
@@ -148,6 +147,8 @@ export interface Order {
   readonly shippingAgency: string | null
   readonly paymentMethod: PaymentMethod
   readonly paymentReference: string | null
+  /** Nota que dejó el comprador al crear el pedido. */
+  readonly customerNote: string | null
   readonly items: readonly OrderItem[]
   readonly subtotalCents: number
   readonly shippingCents: number

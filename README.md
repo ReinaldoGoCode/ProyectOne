@@ -3,11 +3,11 @@
 Tienda conceptual de ropa para pequeños comercios venezolanos. Proyecto de portafolio construido
 por etapas, con datos ficticios y sin integraciones reales.
 
-> **Estado:** sesión 5 de 18 completada. Ficha de producto con selector de talla y color, stock por
-> variante y módulo de WhatsApp listo. La confirmación de pedido llega con el carrito y el checkout
-> (sesiones 6 a 10).
+> **Estado:** flujo comercial de demostración implementado de punta a punta en el navegador:
+> catálogo, carrito, checkout, consulta de pedido y administración local. Usa datos ficticios; no
+> procesa pagos ni coordina envíos reales.
 
-**En vivo:** <https://reinaldogocode.github.io/ProyectOne/>
+**Versión publicada anteriormente:** <https://reinaldogocode.github.io/ProyectOne/>. Esta copia local incluye cambios del flujo de compra que todavía no se han publicado.
 
 **Documentación completa:** [DOCUMENTACION.md](DOCUMENTACION.md) — arquitectura, historial de
 sesiones y commits, pruebas, decisiones y limitaciones.
@@ -20,7 +20,7 @@ Norte Moda modela el flujo real de un comercio pequeño que hoy vende por Instag
 catálogo con tallas y colores, carrito, creación de pedidos y un panel donde el dueño registra el
 pago y el despacho a mano.
 
-**Sí incluye (cuando el proyecto esté completo):**
+**Incluye:**
 
 - Catálogo con categorías y variantes de talla y color.
 - Carrito con cantidades, subtotal y totales.
@@ -101,8 +101,9 @@ Cada push a `main` ejecuta `.github/workflows/deploy.yml`: instala dependencias,
 Pages sirve el proyecto bajo el nombre del repositorio, así que el workflow define
 `VITE_BASE_PATH=/ProyectOne/`. En local la variable no existe y la aplicación vive en `/`.
 
-Como Pages no permite reescribir rutas, el build copia `index.html` a `/catalogo` y a cada
-`/producto/:slug`, de modo que esos enlaces directos respondan 200. El workflow copia además
+Como Pages no permite reescribir rutas, el build copia `index.html` a las rutas estáticas conocidas
+(`/catalogo`, `/carrito`, `/checkout`, `/pedido`, `/admin` y páginas de producto), de modo que esos
+enlaces directos respondan 200. El workflow copia además
 `index.html` a `404.html` para que cualquier otra ruta profunda renderice la aplicación; esas rutas
 siguen respondiendo con estado 404, una limitación de Pages que no afecta la navegación interna.
 
@@ -131,7 +132,28 @@ y color. Las tarjetas del catálogo ya enlazan aquí.
   sin stock en ninguna talla también.
 - Al cambiar de color, si la talla actual no existe, se elige la primera talla disponible.
 - La silueta de la prenda toma el color de la variante y el stock se anuncia con `aria-live`.
-- Si todo está agotado, la acción de WhatsApp se desactiva y la página lo explica.
+- Añade la variante seleccionada al carrito; también puede copiar una consulta de WhatsApp.
+- Si todo está agotado, las acciones de compra se desactivan y la página lo explica.
+
+## Carrito, checkout y pedidos
+
+- `/carrito` guarda solo `variantId` y cantidad, revalida con el catálogo vigente y calcula importes
+  en centavos. Permite ajustar cantidades, quitar líneas y vaciar el carrito.
+- `/checkout` valida nombre, teléfono, forma de entrega y método de pago previsto. No pide cédula,
+  correo ni referencia bancaria y no procesa pagos.
+- Al confirmar, el pedido vuelve a validar las variantes y congela nombre, talla, color y precio.
+  Solo muestra confirmación después de guardarlo en el almacenamiento local.
+- `/pedido?codigo=NM-0001` muestra artículos, totales, pago, entrega e historial; permite copiar un
+  resumen.
+- Catálogo, carrito y pedidos se guardan en `localStorage` del navegador actual. No se comparten
+  entre visitantes ni entre dispositivos.
+
+## Panel demo
+
+`/admin` permite crear y editar productos, variantes, SKU y stock; `/admin/pedidos` permite buscar,
+filtrar, consultar y cambiar los estados de pago y entrega por separado. Las transiciones siguen las
+reglas del dominio y registran historial. El panel avisa que no tiene autenticación y que sus datos
+son locales. El pago se marca como verificado manualmente; no hay conexión bancaria.
 
 ## WhatsApp
 
@@ -142,14 +164,13 @@ automatización:
   color y precio.
 - `buildOrderMessage` y `buildOrderWhatsAppUrl` arman el pedido completo: código, cliente, líneas,
   pago, entrega, total y nota opcional.
-- `STORE_WHATSAPP_NUMBER` es un número ficticio y el único lugar donde vive.
+- `VITE_STORE_WHATSAPP_NUMBER` es opcional y queda vacío por defecto. Sin un número configurado, la
+  interfaz solo permite copiar mensajes; no hay un destinatario ficticio o ajeno.
 - `encodeURIComponent` escapa saltos de línea, acentos, `#` y cualquier carácter que rompería la URL.
 
-La ficha usa `WhatsAppActions`: acción principal prominente, botón secundario para copiar el mensaje
-y confirmación visual al copiar. Si el navegador bloquea el portapapeles, se muestra el mensaje
-completo en un campo de solo lectura para copiarlo a mano. El mismo componente recibirá el mensaje del
-pedido en la confirmación y el seguimiento, cuando esas pantallas existan. No se creó una
-confirmación ficticia: los pedidos reales llegan con el carrito y el checkout.
+La ficha usa `WhatsAppActions` para copiar el mensaje y, solo si se configura explícitamente el
+número propio de la tienda, abrir el enlace. En la confirmación se puede copiar un resumen del pedido;
+el flujo no lo envía automáticamente.
 
 ---
 
@@ -185,9 +206,10 @@ norte-moda/
 │  │  ├─ not-found/                # página 404
 │  │  ├─ catalog/                  # grilla, controles y estado en la URL
 │  │  ├─ product/                  # ficha, selector de variantes y stock
-│  │  ├─ cart/                     # sesiones 6 y 7
-│  │  ├─ checkout/                 # sesiones 8 a 10
-│  │  └─ admin/                    # sesiones 11 a 16
+│  │  ├─ cart/                     # cantidades, resumen y persistencia
+│  │  ├─ checkout/                 # formulario y creación del pedido
+│  │  ├─ order-tracking/            # consulta local por código
+│  │  └─ admin/                    # productos, variantes, pedidos y estados
 │  ├─ hooks/                       # useDocumentTitle
 │  ├─ lib/                         # colores, rutas base y whatsapp.ts
 │  ├─ styles/index.css             # Tailwind, tokens y animaciones
@@ -263,7 +285,8 @@ Reglas que sostienen el modelo:
 
 ## Pruebas
 
-`pnpm test` ejecuta 81 pruebas en ocho archivos, con Vitest en entorno Node:
+`pnpm test` ejecuta pruebas de dominio, recuperación de repositorios, renderizado e interacciones de
+compra y administración:
 
 - `money.test.ts`: formato `es-VE`, rechazo de montos inválidos y sumas sin coma flotante.
 - `product.test.ts`: variantes, stock, disponibilidad y selección inicial.
@@ -273,10 +296,12 @@ Reglas que sostienen el modelo:
 - `home-page.test.tsx`: renderizado de la portada con datos del seed y de la página 404.
 - `catalog-page.test.tsx`: grilla completa, filtro por URL, búsqueda, orden y estado vacío.
 - `product-page.test.tsx`: ficha, selección por URL, combinaciones agotadas y producto inexistente.
+- `repositories.test.ts`: lectura, escritura y recuperación de catálogo, carrito y pedidos.
+- `checkout-flow.test.tsx`: compra completa, persistencia, consulta por código y transiciones
+  independientes desde el panel.
 
-Las pruebas de interfaz usan `renderToStaticMarkup`: verifican que la página renderiza y contiene lo
-esperado, sin necesidad de un DOM simulado. Las interacciones de variantes se verificaron además en
-Chrome headless contra el servidor de desarrollo y el sitio publicado.
+Las pruebas de render usan `renderToStaticMarkup`; el recorrido funcional usa Testing Library con DOM
+simulado. No hay una suite Playwright configurada.
 
 ---
 
@@ -303,13 +328,23 @@ Chrome headless contra el servidor de desarrollo y el sitio publicado.
 Todos los productos, precios, clientes y pedidos son inventados. La taxonomía y los rangos de precio
 se inspiran en tiendas de ropa de tamaño medio; los nombres, descripciones, precios y combinaciones
 son propios de Norte Moda. No se copiaron productos ni marcas, y el proyecto no está afiliado a
-ninguna tienda. No se recogen datos de usuarios ni se envía información a servicios externos.
+ninguna tienda. Los datos que se ingresan en el checkout se guardan en el `localStorage` de este
+navegador. No se envían automáticamente; si se configura un número propio y se abre una acción de
+WhatsApp, el texto se comparte con ese servicio.
 
-## Próxima sesión
+## Guion de demo (60 segundos)
 
-Sesión 6: estado del carrito con reducer puro, cantidades y totales, con pruebas. Después, checkout y
-creación de pedido para poder montar el mensaje de WhatsApp de pedido en la confirmación y el
-seguimiento.
+1. Abre una ficha, elige talla y color, añade la prenda y ajusta la cantidad en el carrito.
+2. Completa el checkout con datos ficticios y elige retiro para usar el recorrido más corto.
+3. Muestra el código, el resumen y los estados iniciales del pedido.
+4. Abre `/admin/pedidos`, marca el pago por verificar y luego verificado; avanza preparación y
+   despacho por separado.
+5. Regresa a la consulta y muestra el historial. Recuerda que los cambios viven solo en este
+   navegador.
+
+Para convertirlo en una aplicación de producción hacen falta un backend compartido, autenticación y
+roles, autorización en servidor, reserva transaccional de stock, políticas de privacidad y una
+integración de pagos/envíos revisada con proveedores reales.
 
 ## Licencia
 

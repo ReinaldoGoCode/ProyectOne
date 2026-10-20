@@ -1,8 +1,10 @@
+import { useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 
+import { useCart } from '@/app/providers/cartContext'
 import { GarmentArt } from '@/components/ui/GarmentArt'
 import { WhatsAppActions } from '@/components/ui/WhatsAppActions'
-import { seedCategories, seedVariants } from '@/data/seed'
+import { buttonClassName } from '@/components/ui/button'
 import { formatMoney } from '@/domain/money'
 import {
   findFirstAvailableSelection,
@@ -14,13 +16,14 @@ import {
   listColors,
   listSizes,
 } from '@/domain/product'
-import type { Product, Size } from '@/domain/types'
-import { buildProductInquiryMessage } from '@/lib/whatsapp'
+import type { Catalog, Product, Size } from '@/domain/types'
+import { buildProductInquiryMessage, IS_WHATSAPP_CONFIGURED } from '@/lib/whatsapp'
 
 import { ProductVariantSelector } from './ProductVariantSelector'
 
 interface ProductDetailProps {
   readonly product: Product
+  readonly catalog: Catalog
 }
 
 function describeStock(stock: number): string {
@@ -39,11 +42,13 @@ function describeStock(stock: number): string {
   return `${String(stock)} unidades disponibles`
 }
 
-export function ProductDetail({ product }: ProductDetailProps) {
+export function ProductDetail({ product, catalog }: ProductDetailProps) {
+  const { addToCart } = useCart()
+  const [cartFeedback, setCartFeedback] = useState('')
   const [searchParams, setSearchParams] = useSearchParams()
 
-  const category = seedCategories.find((item) => item.id === product.categoryId)
-  const variants = getProductVariants(seedVariants, product.id)
+  const category = catalog.categories.find((item) => item.id === product.categoryId)
+  const variants = getProductVariants(catalog.variants, product.id)
   const sizes = listSizes(variants, product.id)
   const colors = listColors(variants, product.id)
   const colorsWithStock = new Set(listAvailableColors(variants, product.id))
@@ -110,6 +115,19 @@ export function ProductDetail({ product }: ProductDetailProps) {
         priceCents: product.priceCents,
       })
     : ''
+
+  const selectedVariant = selection
+    ? variants.find(
+        (variant) =>
+          variant.size === selection.size && variant.color === selection.color && variant.stock > 0,
+      )
+    : undefined
+
+  function handleAddToCart(): void {
+    if (selectedVariant === undefined) return
+    const error = addToCart(selectedVariant.id)
+    setCartFeedback(error ?? 'Añadida al carrito.')
+  }
 
   return (
     <section className="mx-auto w-full max-w-6xl px-5 py-8 sm:px-8 sm:py-12">
@@ -197,15 +215,35 @@ export function ProductDetail({ product }: ProductDetailProps) {
           </div>
 
           <div className="mt-8">
+            <button
+              type="button"
+              disabled={stock === 0 || selectedVariant === undefined}
+              onClick={handleAddToCart}
+              className={buttonClassName(
+                'primary',
+                'w-full disabled:cursor-not-allowed disabled:opacity-40',
+              )}
+            >
+              Añadir al carrito
+            </button>
+            <p aria-live="polite" className="mt-2 min-h-4 text-center text-xs text-stone-600">
+              {cartFeedback}
+            </p>
+            <Link to="/carrito" className={buttonClassName('secondary', 'mt-2 w-full')}>
+              Ver carrito
+            </Link>
             <WhatsAppActions
               message={inquiryMessage}
               label="Consultar por WhatsApp"
+              variant="secondary"
               disabled={stock === 0}
               disabledLabel="Agotado por ahora"
             />
             <p className="mt-3 text-center text-xs leading-relaxed text-stone-500">
               {stock > 0
-                ? 'Se abre WhatsApp con el mensaje listo. La disponibilidad final se confirma en la conversación.'
+                ? IS_WHATSAPP_CONFIGURED
+                  ? 'Se abre WhatsApp con el mensaje listo. La disponibilidad final se confirma en la conversación.'
+                  : 'Modo demo: copia el mensaje para consultarlo desde tu cuenta de WhatsApp.'
                 : 'Vuelve al catálogo o consúltanos por otra prenda.'}
             </p>
           </div>

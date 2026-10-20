@@ -21,7 +21,16 @@ function staticRouteCopies(): Plugin {
     closeBundle() {
       const outDir = resolve(process.cwd(), 'dist')
       const indexFile = resolve(outDir, 'index.html')
-      const routes = ['catalogo', ...seedProducts.map((product) => `producto/${product.slug}`)]
+      const routes = [
+        'catalogo',
+        'carrito',
+        'checkout',
+        'pedido',
+        'admin',
+        'admin/productos',
+        'admin/pedidos',
+        ...seedProducts.map((product) => `producto/${product.slug}`),
+      ]
 
       for (const route of routes) {
         const target = resolve(outDir, route, 'index.html')

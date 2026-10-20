@@ -1,11 +1,11 @@
 # Norte Moda — Documentación completa
 
 > Tienda conceptual de ropa para pequeños comercios venezolanos. Proyecto de portafolio con datos
-> ficticios, construido por etapas y desplegado en GitHub Pages.
+> ficticios. El repositorio contiene configuración de despliegue para GitHub Pages.
 >
-> **Última actualización:** 2026-10-19 · **Versión de la aplicación:** 0.5.0 · **Rama:** `main`
+> **Última actualización:** 2026-10-20 · **Versión de la aplicación:** 0.5.0 · **Copia de trabajo:** esta carpeta no contiene metadatos `.git`.
 >
-> **Sitio publicado:** <https://reinaldogocode.github.io/ProyectOne/>
+> **Sitio publicado anteriormente:** <https://reinaldogocode.github.io/ProyectOne/>. Esta copia de trabajo incluye cambios locales que aún no se han publicado.
 >
 > **Repositorio:** <https://github.com/ReinaldoGoCode/ProyectOne>
 
@@ -13,23 +13,24 @@
 
 ## 1. Resumen ejecutivo
 
-Norte Moda modela el flujo de venta de un comercio pequeño de ropa en Venezuela: catálogo con tallas
-y colores, ficha de producto con stock real, filtros de catálogo y un puente directo a WhatsApp para
-consultar una prenda. La verificación del pago y la coordinación del envío son manuales, como en el
-mostrador; no hay pagos ni integraciones automáticas.
+Norte Moda es una tienda conceptual para mostrar un flujo comercial completo dentro de una
+demostración local: catálogo, selección de variantes, carrito, checkout, creación y consulta de
+pedidos, y panel de productos y pedidos. Los datos son ficticios; pago y entrega se actualizan a mano.
 
-A la fecha están implementadas las **sesiones 1 a 5 de 18**:
+La implementación actual incluye:
 
 - Base técnica con React 19, TypeScript estricto, Vite 7 y Tailwind 4.
 - Modelo de dominio con dinero en centavos y dos ejes de estado para pedidos.
 - Catálogo ficticio de 6 categorías, 21 prendas y 171 variantes.
 - Portada editorial, catálogo con filtros/búsqueda/orden y página 404.
 - Ficha de producto con selector de talla y color, stock y combinaciones agotadas deshabilitadas.
-- Módulo de WhatsApp con mensajes de consulta y de pedido, URL `wa.me` escapada y pruebas.
-- 81 pruebas automatizadas, tipado y lint en verde, despliegue automático en GitHub Pages.
+- Persistencia local tipada para catálogo, carrito y pedidos, con recuperación ante datos dañados.
+- Checkout de invitado y consulta de pedidos por código en el mismo navegador.
+- Panel demo para productos, variantes, stock, estados de pago y entrega con historial.
+- Suite de pruebas de dominio, repositorios, interfaz y flujo de compra.
 
-Lo que sigue: carrito, checkout, creación de pedidos, confirmación y seguimiento, panel
-administrativo y persistencia con Supabase. La sección 15 detalla el plan.
+No hay backend compartido, autenticación de producción, pagos ni envíos reales. Los pedidos y cambios
+locales no se comparten entre dispositivos.
 
 ---
 
@@ -60,19 +61,23 @@ coordina por conversación; el sistema registra estados y evita vender stock ine
 - Ficha de producto con variantes de talla y color y stock por combinación.
 - Enlaces compartibles al catálogo y a cada producto.
 - Consulta de una prenda por WhatsApp y copia del mensaje.
+- Carrito persistido por variante, cantidades, revalidación de stock y resumen monetario.
+- Checkout invitado con validación, métodos de entrega y pago previstos, sin cédula ni correo.
+- Creación de pedidos con código, precios y descripciones congelados y confirmación local.
+- Consulta de pedido por código con estados separados, historial y resumen copiable.
+- Panel local para productos, variantes, SKU, stock y pedidos.
+- Persistencia local con validación de datos y opción para restaurar la demo.
 - Página 404 y navegación completa entre portada, catálogo y ficha.
 - Datos ficticios centralizados y pruebas de integridad del seed.
-- Despliegue automático con verificación previa (tipos, lint y pruebas).
+- Workflow configurado para verificar, construir y desplegar cuando se publica desde `main`.
 
-### Pendiente (planificado)
+### Pendiente para producción
 
-- Carrito con cantidades y totales (sesiones 6 y 7).
-- Checkout como invitado, creación de pedido y confirmación (sesiones 8 a 10).
-- Consulta de pedido por código (sesión 10).
-- Panel administrativo de productos y pedidos (sesiones 11 a 16).
-- Estados de pago y entrega con historial (sesión 15).
-- Persistencia con Supabase, autenticación real y RLS (fase posterior).
-- Pasada de accesibilidad, pruebas de flujo y cierre de portafolio (sesiones 17 y 18).
+- Backend compartido, transacciones y reserva de inventario.
+- Autenticación real, roles y políticas de acceso del servidor.
+- Pagos, despacho y seguimiento con proveedores configurados y revisados.
+- Almacenamiento de imágenes y proceso de privacidad para datos de clientes.
+- E2E con Playwright y auditoría completa de accesibilidad con tecnologías de asistencia.
 
 ### Fuera de alcance
 
@@ -131,7 +136,7 @@ norte-moda/
 │  │  └─ ui/                        # GarmentArt, ProductCard, WhatsAppActions, button
 │  ├─ data/
 │  │  ├─ seed/                      # categorías, productos, variantes
-│  │  └─ repositories/              # reservado para persistencia
+│  │  └─ repositories/              # localStorage tipado y recuperación
 │  ├─ domain/
 │  │  ├─ types.ts
 │  │  ├─ money.ts
@@ -143,9 +148,10 @@ norte-moda/
 │  │  ├─ catalog/
 │  │  ├─ product/
 │  │  ├─ not-found/
-│  │  ├─ cart/                      # vacío, sesiones 6-7
-│  │  ├─ checkout/                  # vacío, sesiones 8-10
-│  │  └─ admin/                     # vacío, sesiones 11-16
+│  │  ├─ cart/                      # resumen y edición del carrito
+│  │  ├─ checkout/                  # validación y creación del pedido
+│  │  ├─ order-tracking/            # consulta local por código
+│  │  └─ admin/                     # productos, variantes y pedidos
 │  ├─ hooks/useDocumentTitle.ts
 │  ├─ lib/                          # colors.ts, paths.ts, whatsapp.ts
 │  ├─ styles/index.css
@@ -161,8 +167,6 @@ norte-moda/
 
 Métricas actuales de código:
 
-- 40 archivos `.ts`/`.tsx` en `src`, ~3.538 líneas.
-- 8 de esos archivos son pruebas (~608 líneas); 32 archivos de aplicación (~2.930 líneas).
 - 21 ADR documentados.
 
 ### 5.2 Capas y reglas
@@ -171,7 +175,7 @@ Métricas actuales de código:
 | -------------------- | ---------------------------------------------------- | --------------------------------- |
 | `domain/`            | Tipos, dinero, stock, filtros y transiciones         | No importa React ni Supabase      |
 | `data/seed/`         | Catálogo ficticio y expansión de variantes           | Datos puros, sin lógica de UI     |
-| `data/repositories/` | Futuro adaptador de persistencia                     | Interfaz antes que implementación |
+| `data/repositories/` | Adaptadores tipados sobre `localStorage`             | Validar datos al leer y escribir  |
 | `features/`          | Capacidades de negocio (catálogo, ficha, carrito...) | Componentes y páginas por dominio |
 | `components/ui/`     | Presentación reutilizable                            | Sin reglas de negocio             |
 | `lib/`               | Utilidades sin estado                                | WhatsApp, colores, rutas base     |
@@ -180,25 +184,29 @@ Métricas actuales de código:
 Reglas transversales:
 
 - Dinero siempre en centavos enteros; formatear solo al mostrar.
-- El carrito guardará `variantId` y cantidad, no precios; el pedido congelará los datos.
+- El carrito guarda `variantId` y cantidad, no precios; el pedido congela los datos del catálogo.
 - Pago y entrega son dos ejes independientes, no un único estado.
 - La lógica nueva de dominio se prueba antes de conectarla a la UI.
 - Sin `any` explícito y sin `@ts-ignore` sin justificar.
 
 ### 5.3 Rutas
 
-| Ruta                            | Contenido                                         | Estado                     |
-| ------------------------------- | ------------------------------------------------- | -------------------------- |
-| `/`                             | Portada editorial con selección, relato y proceso | Implementada               |
-| `/catalogo`                     | Catálogo con filtros, búsqueda y orden            | Implementada               |
-| `/producto/:slug`               | Ficha de producto y variantes                     | Implementada               |
-| `/producto/:slug?talla=&color=` | Variante preseleccionada y compartible            | Implementada               |
-| `*`                             | Página 404 dentro del layout                      | Implementada               |
-| `/pedido/:code`                 | Confirmación y seguimiento                        | Pendiente (sesión 10)      |
-| `/admin`                        | Panel administrativo                              | Pendiente (sesiones 11-16) |
+| Ruta                     | Contenido                                         | Estado       |
+| ------------------------ | ------------------------------------------------- | ------------ |
+| `/`                      | Portada editorial con selección, relato y proceso | Implementada |
+| `/catalogo`              | Catálogo con filtros, búsqueda y orden            | Implementada |
+| `/producto/:slug`        | Ficha de producto y variantes                     | Implementada |
+| `/carrito`               | Cantidades, subtotal y disponibilidad             | Implementada |
+| `/checkout`              | Compra invitada y creación local                  | Implementada |
+| `/pedido?codigo=NM-0001` | Consulta e historial del pedido                   | Implementada |
+| `/admin/productos`       | Productos, variantes, SKU y stock                 | Implementada |
+| `/admin/pedidos`         | Búsqueda, detalle y transiciones                  | Implementada |
+| `*`                      | Página 404 dentro del layout                      | Implementada |
 
 Parámetros del catálogo: `categoria` (slug), `q` (texto) y `orden` (`novedades`, `precio-asc`,
 `precio-desc`).
+
+Las páginas se cargan bajo demanda al entrar en cada ruta para reducir el JavaScript inicial.
 
 ### 5.4 Modelo de datos
 
@@ -209,7 +217,7 @@ Parámetros del catálogo: `categoria` (slug), `q` (texto) y `orden` (`novedades
 | `Variant`          | `id`, `productId`, `size`, `color`, `sku`, `stock`                                              |
 | `Catalog`          | `categories`, `products`, `variants`                                                            |
 | `CartLine`         | `variantId`, `quantity`                                                                         |
-| `Customer`         | nombre, cédula, teléfono, email opcional                                                        |
+| `Customer`         | nombre, teléfono, email nulo (no se solicita en checkout)                                       |
 | `Order`            | código, cliente, entrega, pago, líneas, totales, dos estados, notas e historial                 |
 | `OrderItem`        | datos congelados: nombre, talla, color, precio unitario y cantidad                              |
 | `OrderStatusEvent` | unión discriminada por `axis` (`payment` o `fulfillment`)                                       |
@@ -222,21 +230,20 @@ Estados:
 ### 5.5 Flujo de datos actual
 
 ```text
-data/seed (21 productos, 171 variantes)
-        │
-        ▼
-domain/catalog.ts (filtro, búsqueda, orden)
-domain/product.ts (stock, combinaciones, selección)
-        │
-        ▼
-features/* (páginas y componentes)
-        │
-        ▼
+seed + localStorage validado ←→ repositorios de catálogo, carrito y pedidos
+        │                                   │
+        ▼                                   ▼
+domain/ (stock, importes, estados) ←→ providers de aplicación
+        │                                   │
+        └────── features (tienda, checkout, tracking, admin)
+                            │
+                            ▼
 React Router + Tailwind → build estático → GitHub Pages
 ```
 
-No hay backend: el seed es la fuente de verdad de la v1. El día que llegue Supabase, el contrato de
-los repositorios permitirá cambiar el origen sin reescribir las pantallas.
+No hay backend compartido: el seed abastece el primer catálogo y `localStorage` conserva los cambios
+de este navegador. Los precios se resuelven contra el catálogo actual al crear el pedido; el pedido
+guarda después una copia histórica de sus líneas y totales.
 
 ---
 
@@ -271,24 +278,21 @@ los repositorios permitirá cambiar el origen sin reescribir las pantallas.
 - Al cambiar de color se conserva la talla si existe; si no, se elige la primera disponible.
 - Stock dinámico con `aria-live`: disponible, últimas unidades o agotado.
 - La silueta toma el color de la variante con transición suave.
-- Estado agotado: badge, acción de WhatsApp deshabilitada y explicación.
+- Estado agotado: badge, acciones de compra deshabilitadas y explicación.
+- Añadir al carrito la combinación seleccionada; consulta opcional por WhatsApp.
 - Selección reflejada en la URL (`?talla=M&color=Negro`).
 
 ### 6.4 WhatsApp
 
 Módulo puro en `src/lib/whatsapp.ts`:
 
-```ts
-buildWhatsAppUrl(message, phone?)       // https://wa.me/<número>?text=<mensaje escapado>
-buildOrderMessage(input)                // pedido completo con markdown de WhatsApp
-buildOrderWhatsAppUrl(input)            // mensaje + enlace
-buildProductInquiryMessage(input)       // consulta de una prenda
-buildProductInquiryUrl(input)           // consulta + enlace
-```
+Funciones en `src/lib/whatsapp.ts`: mensajes de pedido y producto, validación del número y enlace
+`wa.me` con el texto codificado.
 
 Características:
 
-- Número ficticio de la tienda en una sola constante: `584125550134`.
+- `VITE_STORE_WHATSAPP_NUMBER` es opcional y queda vacío por defecto. No hay un teléfono ajeno ni
+  ficticio hardcodeado.
 - Mensajes con negritas (`*texto*`), listas y saltos de línea.
 - `encodeURIComponent` para escapar acentos, saltos de línea, `#` y símbolos.
 - Validación de pedidos sin código o sin prendas, y de números demasiado cortos.
@@ -298,11 +302,11 @@ Características:
 
 Interfaz `WhatsAppActions`:
 
-- Acción principal “Consultar por WhatsApp”.
-- Acción secundaria “Copiar mensaje” con confirmación visual.
+- Si se configura explícitamente el teléfono de la tienda, abre el enlace con el mensaje listo.
+- Sin configuración, solo muestra “Copiar mensaje” y avisa que está en modo demo.
 - Si el navegador bloquea el portapapeles, muestra el mensaje completo en un campo de solo lectura
   para copiarlo a mano.
-- El mismo componente recibirá el mensaje del pedido en confirmación y seguimiento.
+- La consulta del pedido ofrece un resumen copiable; no envía mensajes automáticamente.
 
 ### 6.5 Navegación y 404
 
@@ -312,6 +316,51 @@ Interfaz `WhatsAppActions`:
 - Enlaces de sección que funcionan desde cualquier ruta (`BASE_URL#seccion`).
 - 404 con copy propio y acción para volver al inicio.
 - Título del documento por vista (`Catálogo · Norte Moda`, nombre del producto, etc.).
+
+### 6.6 Carrito (`/carrito`)
+
+- Guarda solo id de variante y cantidad; el precio y la disponibilidad se resuelven en el catálogo.
+- Incrementa, reduce, quita o vacía artículos; muestra subtotal y acceso de vuelta al producto.
+- Informa si una variante desapareció, se agotó, se desactivó o si su cantidad superó el stock.
+- Bloquea el checkout mientras haya líneas inválidas o el carrito esté vacío.
+
+### 6.7 Checkout y creación de pedido (`/checkout`)
+
+- Checkout de invitado con React Hook Form y Zod: nombre, teléfono, entrega, pago previsto y nota.
+- Solicita dirección según la forma de entrega; no pide cédula, correo ni referencia bancaria.
+- Recalcula las líneas contra el catálogo vigente y calcula subtotal, tarifa ficticia y total en
+  centavos.
+- Genera el código `NM-####`, congela producto, variante y precio, e inicia pago y entrega por separado.
+- Solo limpia el carrito y navega a confirmación si el pedido se guardó correctamente.
+- Explica que no procesa pagos ni crea envíos.
+
+### 6.8 Consulta del pedido (`/pedido?codigo=NM-0001`)
+
+- Busca por código normalizado en los pedidos locales del navegador actual.
+- Presenta artículos y totales congelados, pago previsto, pago actual y preparación/entrega.
+- Muestra el historial por eje y deja copiar un resumen sin enviar datos a WhatsApp.
+- Explica los códigos inexistentes y que los pedidos no se comparten entre navegadores.
+
+### 6.9 Panel de administración (`/admin`)
+
+- Crea y edita productos; activa o pausa su aparición en la tienda.
+- Crea, edita y elimina variantes con talla, color, SKU único y stock entero no negativo.
+- Busca y filtra pedidos; consulta sus líneas, totales, comprador y coordinación.
+- Cambia pago y entrega en controles separados, solo mediante transiciones de dominio válidas.
+- «Por verificar» registra recepción pendiente; «Pagado» requiere una acción posterior de revisión
+  manual. No hay consulta bancaria ni señal del comprador que confirme un pago.
+- Cada transición se agrega al historial. La entrega avanza en orden de preparación, despacho y
+  entrega.
+- Incluye restauración confirmada de los datos ficticios.
+- Avisa que los datos son locales y que el panel no tiene autenticación ni protección de producción.
+
+### 6.10 Persistencia local
+
+- Repositorios separados para catálogo, carrito y pedidos; los componentes no llaman directamente a
+  `localStorage`.
+- Zod valida datos persistidos, totales congelados, referencias del catálogo, ids y códigos.
+- Datos dañados se descartan o restauran desde el seed; el carrito se recorta al stock disponible.
+- El estado sobrevive a recargas en el mismo navegador, pero no se comparte entre dispositivos.
 
 ---
 
@@ -377,34 +426,37 @@ ninguna marca** y el proyecto no está afiliado a ninguna tienda.
 
 ## 9. Pruebas y calidad
 
-### Estado actual
+### Verificaciones de esta entrega
 
-| Comando             | Resultado                                               |
-| ------------------- | ------------------------------------------------------- |
-| `pnpm test`         | 81 pruebas en 8 archivos                                |
-| `pnpm typecheck`    | 0 errores                                               |
-| `pnpm lint`         | 0 errores, 0 advertencias                               |
-| `pnpm format:check` | Todo formateado                                         |
-| `pnpm build`        | 69 módulos; CSS 40,42 kB; JS 369,47 kB (115,06 kB gzip) |
+| Comando             | Resultado                                              |
+| ------------------- | ------------------------------------------------------ |
+| `pnpm test`         | Correcto: 115 pruebas en 12 archivos                   |
+| `pnpm typecheck`    | Correcto                                               |
+| `pnpm lint`         | Correcto, sin advertencias                             |
+| `pnpm format:check` | Correcto                                               |
+| `pnpm build`        | Correcto; entrada principal 447,11 kB (138,43 kB gzip) |
+| `pnpm check`        | Correcto: tipos, lint y 115 pruebas                    |
+
+El build divide las pantallas por ruta y ya no genera un paquete de entrada por encima de 500 kB.
+Rollup muestra avisos no bloqueantes al retirar anotaciones de comentarios de Zod 4.
+En `vite preview`, las 29 rutas verificadas (inicio, rutas principales y 21 productos) respondieron
+HTTP 200.
 
 ### Distribución
 
-| Archivo                                            | Pruebas | Qué cubre                                           |
-| -------------------------------------------------- | ------- | --------------------------------------------------- |
-| `domain/__tests__/money.test.ts`                   | 15      | Formato `es-VE`, centavos, sumas y validaciones     |
-| `domain/__tests__/product.test.ts`                 | 21      | Variantes, stock, combinaciones y selección inicial |
-| `domain/__tests__/seed.test.ts`                    | 10      | Integridad del catálogo                             |
-| `domain/__tests__/catalog.test.ts`                 | 13      | Filtros, búsqueda sin acentos, orden y conteos      |
-| `lib/__tests__/whatsapp.test.ts`                   | 10      | Mensajes, URL `wa.me`, escapado y validaciones      |
-| `features/home/__tests__/home-page.test.tsx`       | 2       | Render de portada y 404                             |
-| `features/catalog/__tests__/catalog-page.test.tsx` | 5       | Catálogo, URL, búsqueda, orden y vacío              |
-| `features/product/__tests__/product-page.test.tsx` | 5       | Ficha, variante por URL, agotado e inexistente      |
+| Área de pruebas                                    | Cobertura                                                     |
+| -------------------------------------------------- | ------------------------------------------------------------- |
+| `domain/__tests__/`                                | Dinero, catálogo, carrito, producto, pedidos y transiciones   |
+| `data/repositories.test.ts`                        | Persistencia, validación y recuperación de datos dañados      |
+| `features/home/__tests__/home-page.test.tsx`       | Render de portada y 404                                       |
+| `features/catalog/__tests__/catalog-page.test.tsx` | Filtros, URL, búsqueda, orden y vacío                         |
+| `features/product/__tests__/product-page.test.tsx` | Variantes, agotado e interacción segura de WhatsApp           |
+| `features/checkout/checkout-flow.test.tsx`         | Añadir, modificar, checkout, guardar, consultar y administrar |
 
-Las pruebas de UI usan `renderToStaticMarkup` con `MemoryRouter`: verifican render y contenido sin
-DOM simulado. Las interacciones se comprobaron además con Chrome headless contra el servidor local y
-el sitio publicado.
+Las pruebas de humo usan `renderToStaticMarkup`; el recorrido comprador/administrador usa
+Testing Library y jsdom. No se configuró Playwright ni una suite E2E en navegador real.
 
-### Verificaciones manuales con Chrome headless
+### Verificaciones manuales registradas en una etapa anterior
 
 - Catálogo: búsqueda `lino` → 5 resultados, foco conservado, URL actualizada.
 - Catálogo: filtro `Vestidos` → 4 piezas; orden descendente $42 → $34.
@@ -415,15 +467,20 @@ el sitio publicado.
 - Portapapeles bloqueado en headless: aparece el campo manual con el mensaje completo.
 - Móvil: `scrollWidth = 390` en portada, catálogo y ficha.
 
+Estas observaciones son históricas y no equivalen a una revisión visual de todos los flujos añadidos
+en esta entrega. Para repetirla, iniciar `pnpm dev`, revisar catálogo, ficha, carrito, checkout,
+consulta de pedido y panel a 390 px y 1440 px, y guardar capturas sin datos personales reales.
+
 ### Historial de pruebas por etapa
 
-| Etapa    | Pruebas                                |
-| -------- | -------------------------------------- |
-| Sesión 1 | 0 (validación con tipos, lint y build) |
-| Sesión 2 | 42                                     |
-| Sesión 3 | 44                                     |
-| Sesión 4 | 62                                     |
-| Sesión 5 | 81                                     |
+| Etapa                 | Pruebas                                |
+| --------------------- | -------------------------------------- |
+| Sesión 1              | 0 (validación con tipos, lint y build) |
+| Sesión 2              | 42                                     |
+| Sesión 3              | 44                                     |
+| Sesión 4              | 62                                     |
+| Sesión 5              | 81                                     |
+| Cierre de flujo local | ver resultados de esta entrega arriba  |
 
 ---
 
@@ -432,21 +489,22 @@ el sitio publicado.
 - **Repositorio público:** `ReinaldoGoCode/ProyectOne`.
 - **GitHub Pages** configurado con `build_type: workflow`.
 - **URL:** <https://reinaldogocode.github.io/ProyectOne/>.
-- El workflow `.github/workflows/deploy.yml` corre en cada push a `main`:
+- El workflow `.github/workflows/deploy.yml` está configurado para correr en cada push a `main`:
   1. Instala pnpm y Node.
   2. `pnpm install --frozen-lockfile`.
-  3. `pnpm check` (tipos, lint y 81 pruebas).
+  3. `pnpm check` (tipos, lint y pruebas).
   4. `pnpm build` con `VITE_BASE_PATH=/ProyectOne/`.
   5. Genera `dist/404.html`.
   6. Publica el artefacto en Pages.
-- El build copia `index.html` a `/catalogo` y a cada `/producto/:slug`, de modo que esos enlaces
-  directos respondan **200**.
+- El build copia `index.html` a `/catalogo`, `/carrito`, `/checkout`, `/pedido`, las rutas estáticas
+  del panel y cada `/producto/:slug`, de modo que esas rutas respondan **200**.
 - Las rutas desconocidas reciben `404.html`, que renderiza la app con la página 404. Es una
   limitación de GitHub Pages: no hay reescritura de rutas.
 - `VITE_BASE_PATH` mantiene la base `/` en local y `/ProyectOne/` en Pages.
 
-Credenciales: el repositorio usa la credencial de Git configurada en la máquina; no hay secretos en
-el código.
+Esta copia de trabajo no contiene metadatos `.git`; por eso no se pudo comprobar su rama, comparar
+cambios locales con el remoto ni publicar esta versión. La URL anterior puede seguir mostrando una
+versión previa. No hay credenciales ni secretos de producción en el código.
 
 ---
 
@@ -529,13 +587,18 @@ el código.
 - `whatsapp.ts` con mensajes de pedido y consulta.
 - `WhatsAppActions` con copiar y respaldo manual.
 - Rutas estáticas de todos los productos en el build.
-- 81 pruebas.
+- 81 pruebas en esa etapa histórica.
 
-### Totales de Git
+### Cierre del flujo de demostración — 2026-10-20
 
-- 7 commits de desarrollo (sesiones 1 a 5) más el commit de esta documentación.
-- +8.335 líneas, −352 líneas en los siete commits de desarrollo (suma de los `--shortstat`).
-- Árbol limpio y sincronizado con `origin/main`.
+- Carrito persistido, con cantidades, revalidación contra catálogo y totales.
+- Checkout validado para invitados, pedido con código y líneas congeladas.
+- Consulta local de pedido con estados, historial y resumen copiable.
+- Panel local para productos, variantes, stock y pedidos con transiciones separadas.
+- Validación de repositorios y recuperación ante datos dañados; reinicio explícito de datos ficticios.
+- Pruebas de interacción compradora y administrativa añadidas.
+- No se generó un commit. Esta copia de trabajo no incluye `.git`, así que no se pudo comparar
+  cambios locales con un historial o rama.
 
 ---
 
@@ -589,45 +652,33 @@ El detalle completo está en `docs/03-decisiones.md`. Resumen:
 
 ## 14. Limitaciones conocidas
 
-1. **No hay carrito ni checkout.** La compra real no está implementada; la ficha solo permite
-   consultar por WhatsApp.
-2. **No hay pedidos.** `buildOrderMessage` está probado pero no montado en una confirmación. No se
-   creó una pantalla ficticia de éxito.
-3. **El stock se valida en el cliente.** Es correcto para la demo, pero no es autoritativo hasta que
-   exista una transacción en Supabase.
-4. **Sin panel administrativo.** No se pueden crear productos ni cambiar estados desde la app.
-5. **Sin autenticación.** No hay cuentas ni roles.
-6. **Sin pagos ni envíos integrados.** Todo se coordina a mano.
-7. **Imágenes de placeholder.** Las siluetas SVG sustituyen a la fotografía.
-8. **Rutas desconocidas con estado 404.** Pages no permite rewrites; las rutas conocidas sí son
-   estáticas.
-9. **Cobertura de UI parcial.** Las pruebas renderizan HTML; no hay E2E automatizado con navegador.
-10. **Accesibilidad parcial.** Hay foco visible, etiquetas y contraste revisado, pero falta la
-    auditoría completa con teclado y lector de pantalla (sesión 17).
-11. **Solo tema claro.** No hay modo oscuro.
-12. **Número de WhatsApp ficticio.** No se envía nada automáticamente.
+1. **Almacenamiento local:** los datos quedan en `localStorage` de este navegador. No son pedidos
+   compartidos y se pierden al limpiar los datos del sitio.
+2. **Sin autoridad de servidor:** catálogo, stock, importes y estados solo se validan en el cliente.
+   No hay transacciones ni reserva de stock entre pedidos o dispositivos.
+3. **Panel sin autenticación:** cualquier persona que abra la ruta puede editar los datos locales.
+   No debe recibir datos reales ni usarse para administrar un comercio.
+4. **Pagos y entregas manuales:** no hay consulta bancaria, captura de comprobantes ni conexión con
+   MRW, ZOOM o servicios de delivery. «Pagado» es un registro manual de la demo.
+5. **WhatsApp opcional:** el número de `VITE_STORE_WHATSAPP_NUMBER` está vacío por defecto; se
+   necesita configurar explícitamente el teléfono propio para abrir un enlace.
+6. **Rutas dinámicas en Pages:** las rutas conocidas se copian como archivos estáticos. Rutas
+   desconocidas cargan el fallback `404.html` con estado HTTP 404.
+7. **Visuales:** las siluetas SVG son ilustraciones temporales; aún no hay fotografía de producto.
+8. **Pruebas de navegador:** Vitest y Testing Library cubren reglas e interacciones principales, pero
+   no hay Playwright ni verificación automatizada en navegadores reales.
+9. **Accesibilidad:** foco, etiquetas, contraste y movimiento reducido están contemplados; falta una
+   auditoría completa con lector de pantalla y personas usuarias.
+10. **Tema:** solo hay tema claro.
 
 ---
 
 ## 15. Próximos pasos
 
-| Sesión | Entregable                                                                 |
-| ------ | -------------------------------------------------------------------------- |
-| 6      | Carrito: reducer puro, cantidades, límites de stock y totales, con pruebas |
-| 7      | UI del carrito, persistencia y revalidación contra el catálogo             |
-| 8      | Checkout con React Hook Form y Zod: datos, entrega y pago                  |
-| 9      | Creación de pedido, código único, confirmación y WhatsApp del pedido       |
-| 10     | Consulta de pedido por código y estados                                    |
-| 11-13  | Panel de productos y variantes                                             |
-| 14-15  | Panel de pedidos, transiciones e historial                                 |
-| 16     | Resumen y reinicio de datos demo                                           |
-| 17     | Accesibilidad, responsive y estados de carga/error                         |
-| 18     | Pruebas de flujo, README final, build y guion de demo                      |
-| Futuro | Supabase, autenticación, RLS, imágenes y tasa de cambio                    |
-
-Para cerrar el flujo de WhatsApp de punta a punta hace falta el bloque **carrito → checkout →
-confirmación**. El mensaje de pedido ya está listo; solo falta pasarle un `Order` real a
-`WhatsAppActions`.
+La siguiente fase es convertir la demo local en un sistema compartido. Requiere configurar Supabase
+u otro backend, autenticación y autorización de servidor, transacciones de inventario, recuperación
+de cuenta, privacidad/retención de datos y pruebas E2E. Los pagos, mensajería y envíos deben
+integrarse solo con credenciales y proveedores autorizados.
 
 ---
 
@@ -648,7 +699,7 @@ pnpm dev          # http://localhost:5173
 ### Verificación
 
 ```bash
-pnpm test         # 81 pruebas
+pnpm test         # 115 pruebas en la verificación de esta entrega
 pnpm typecheck    # tsc --noEmit
 pnpm lint         # ESLint sin advertencias
 pnpm format:check # Prettier
@@ -662,8 +713,9 @@ pnpm check        # tipos + lint + pruebas
 git push origin main
 ```
 
-Cada push ejecuta el workflow, verifica y publica en GitHub Pages. Si falla la verificación, no se
-despliega.
+Al ejecutar esta secuencia en un clon Git válido, un push a `main` inicia el workflow y publica en
+GitHub Pages si pasan las verificaciones. Esta copia local no incluye `.git` y no se publicó desde
+ella. Consulta la tabla de verificaciones para los resultados de esta entrega.
 
 ---
 

@@ -3,19 +3,20 @@ import { describe, expect, it } from 'vitest'
 import type { Customer, OrderItem } from '@/domain/types'
 
 import {
-  STORE_WHATSAPP_NUMBER,
   buildOrderMessage,
   buildOrderWhatsAppUrl,
   buildProductInquiryMessage,
   buildProductInquiryUrl,
   buildWhatsAppUrl,
+  normalizeWhatsAppPhone,
 } from '../whatsapp'
+
+const PHONE = '0'.repeat(12)
 
 const CUSTOMER: Customer = {
   firstName: 'Ana',
   lastName: 'Pérez',
-  idNumber: 'V-12345678',
-  phone: '+58 412 123 4567',
+  phone: `+${PHONE}`,
   email: null,
 }
 
@@ -58,7 +59,7 @@ describe('buildOrderMessage', () => {
         'Hola, quiero confirmar este pedido:',
         '',
         '*Norte Moda — Pedido NM-0001*',
-        'Cliente: Ana Pérez · +58 412 123 4567',
+        `Cliente: Ana Pérez · ${CUSTOMER.phone}`,
         '',
         '*Prendas*',
         '• Camisa de lino Margarita',
@@ -96,24 +97,30 @@ describe('buildOrderMessage', () => {
   })
 })
 
-describe('buildWhatsAppUrl', () => {
-  it('usa el número de la tienda y escapa el mensaje', () => {
-    const message = buildOrderMessage(ORDER)
-    const url = buildWhatsAppUrl(message)
+describe('normalizeWhatsAppPhone', () => {
+  it('deja solo dígitos de un número válido', () => {
+    const formattedTestPhone = `+${PHONE.slice(0, 2)} (${PHONE.slice(2, 5)}) ${PHONE.slice(5, 8)}-${PHONE.slice(8)}`
+    expect(normalizeWhatsAppPhone(formattedTestPhone)).toBe(PHONE)
+  })
 
-    expect(url.startsWith(`https://wa.me/${STORE_WHATSAPP_NUMBER}?text=`)).toBe(true)
+  it('rechaza números demasiado cortos o largos', () => {
+    expect(normalizeWhatsAppPhone('123')).toBeNull()
+    expect(normalizeWhatsAppPhone('1234567890123456')).toBeNull()
+  })
+})
+
+describe('buildWhatsAppUrl', () => {
+  it('usa el número indicado y escapa el mensaje', () => {
+    const message = buildOrderMessage(ORDER)
+    const url = buildWhatsAppUrl(message, PHONE)
+
+    expect(url.startsWith(`https://wa.me/${PHONE}?text=`)).toBe(true)
     expect(url).not.toContain(' ')
     expect(url).not.toContain('\n')
 
     const encoded = url.split('?text=')[1]
     expect(encoded).toBeDefined()
     expect(decodeURIComponent(encoded ?? '')).toBe(message)
-  })
-
-  it('normaliza un número escrito con signos y espacios', () => {
-    const url = buildWhatsAppUrl('Hola', '+58 (412) 555-0134')
-
-    expect(url.startsWith('https://wa.me/584125550134?text=')).toBe(true)
   })
 
   it('rechaza números demasiado cortos', () => {
@@ -144,7 +151,7 @@ describe('buildProductInquiryMessage', () => {
   })
 
   it('genera una URL decodificable', () => {
-    const url = buildProductInquiryUrl(INQUIRY)
+    const url = buildProductInquiryUrl(INQUIRY, PHONE)
     const encoded = url.split('?text=')[1]
 
     expect(decodeURIComponent(encoded ?? '')).toBe(buildProductInquiryMessage(INQUIRY))
@@ -153,7 +160,7 @@ describe('buildProductInquiryMessage', () => {
 
 describe('buildOrderWhatsAppUrl', () => {
   it('combina el mensaje del pedido con el enlace', () => {
-    const url = buildOrderWhatsAppUrl(ORDER)
+    const url = buildOrderWhatsAppUrl(ORDER, PHONE)
     const encoded = url.split('?text=')[1]
 
     expect(decodeURIComponent(encoded ?? '')).toBe(buildOrderMessage(ORDER))

@@ -1,14 +1,16 @@
 import { useEffect, useId, useState } from 'react'
 
-import { buildWhatsAppUrl } from '@/lib/whatsapp'
+import { IS_WHATSAPP_CONFIGURED, STORE_WHATSAPP_NUMBER, buildWhatsAppUrl } from '@/lib/whatsapp'
 
 import { buttonClassName } from './button'
+import type { ButtonVariant } from './button'
 
 type CopyStatus = 'idle' | 'copied' | 'error'
 
 interface WhatsAppActionsProps {
   readonly message: string
   readonly label: string
+  readonly variant?: ButtonVariant
   readonly disabled?: boolean
   readonly disabledLabel?: string
 }
@@ -63,11 +65,13 @@ async function copyText(text: string): Promise<boolean> {
 
 /**
  * Acciones de WhatsApp reutilizables en producto, confirmación y seguimiento.
- * Recibe el mensaje ya construido: la lógica del texto vive en `lib/whatsapp`.
+ * Si no hay número configurado, la demo solo permite copiar el mensaje: nunca
+ * se envía a un número ajeno.
  */
 export function WhatsAppActions({
   message,
   label,
+  variant = 'primary',
   disabled = false,
   disabledLabel = 'No disponible',
 }: WhatsAppActionsProps) {
@@ -114,7 +118,7 @@ export function WhatsAppActions({
         <button
           type="button"
           disabled
-          className={buttonClassName('primary', 'w-full cursor-not-allowed opacity-40')}
+          className={buttonClassName(variant, 'w-full cursor-not-allowed opacity-40')}
         >
           <ChatIcon />
           {disabledLabel}
@@ -126,13 +130,65 @@ export function WhatsAppActions({
     )
   }
 
+  const href =
+    IS_WHATSAPP_CONFIGURED && STORE_WHATSAPP_NUMBER !== null
+      ? buildWhatsAppUrl(message, STORE_WHATSAPP_NUMBER)
+      : null
+
+  if (href === null) {
+    return (
+      <div>
+        <button
+          type="button"
+          onClick={() => {
+            void copyMessage()
+          }}
+          className={buttonClassName(variant, 'w-full')}
+        >
+          <CopyIcon />
+          {copyStatus === 'copied' ? 'Mensaje copiado' : 'Copiar mensaje'}
+        </button>
+
+        <p aria-live="polite" className="mt-2 min-h-4 text-center text-xs text-stone-500">
+          {feedback}
+        </p>
+
+        <p className="mt-1 text-center text-xs leading-relaxed text-stone-500">
+          Modo demo: el WhatsApp de la tienda no está configurado. Copia el mensaje y envíalo desde
+          tu cuenta.
+        </p>
+
+        {showManualCopy ? (
+          <div className="mt-3">
+            <label
+              htmlFor={messageId}
+              className="text-[11px] tracking-[0.14em] text-stone-500 uppercase"
+            >
+              Mensaje para copiar
+            </label>
+            <textarea
+              id={messageId}
+              readOnly
+              value={message}
+              rows={6}
+              onFocus={(event) => {
+                event.currentTarget.select()
+              }}
+              className="mt-2 w-full resize-none rounded-xl bg-white/70 p-3 font-mono text-[11px] leading-relaxed text-stone-700 ring-1 ring-stone-900/10"
+            />
+          </div>
+        ) : null}
+      </div>
+    )
+  }
+
   return (
     <div>
       <a
-        href={buildWhatsAppUrl(message)}
+        href={href}
         target="_blank"
         rel="noreferrer noopener"
-        className={buttonClassName('primary', 'w-full')}
+        className={buttonClassName(variant, 'w-full')}
       >
         <ChatIcon />
         {label}

@@ -1,0 +1,66 @@
+import { useState } from 'react'
+import type { ReactNode } from 'react'
+
+import { useCatalog } from './catalogContext'
+import { CartContext } from './cartContext'
+import { addCartLine, removeCartLine, setCartQuantity, summarizeCart } from '@/domain/cart'
+import { createCartRepository } from '@/data/repositories/cartRepository'
+
+export function CartProvider({ children }: { readonly children: ReactNode }) {
+  const { catalog } = useCatalog()
+  const [repository] = useState(() => createCartRepository())
+  const [lines, setLines] = useState(() => repository.load(catalog))
+
+  function commit(next: typeof lines): void {
+    repository.save(next, catalog)
+    setLines(next)
+  }
+
+  function addToCart(variantId: string, quantity = 1): string | null {
+    const variant = catalog.variants.find((item) => item.id === variantId)
+    const product = variant
+      ? catalog.products.find((item) => item.id === variant.productId)
+      : undefined
+
+    if (variant === undefined || product === undefined || !product.active || variant.stock <= 0) {
+      return 'Esta variante ya no está disponible.'
+    }
+
+    if (!Number.isInteger(quantity) || quantity <= 0) {
+      return 'Elige una cantidad válida.'
+    }
+
+    const next = addCartLine(lines, variantId, quantity, variant.stock)
+    commit(next)
+    return null
+  }
+
+  function updateQuantity(variantId: string, quantity: number): void {
+    const variant = catalog.variants.find((item) => item.id === variantId)
+    commit(setCartQuantity(lines, variantId, quantity, variant?.stock ?? 0))
+  }
+
+  function remove(variantId: string): void {
+    commit(removeCartLine(lines, variantId))
+  }
+
+  function clear(): void {
+    repository.reset()
+    setLines([])
+  }
+
+  return (
+    <CartContext.Provider
+      value={{
+        lines,
+        summary: summarizeCart(lines, catalog),
+        addToCart,
+        setQuantity: updateQuantity,
+        removeLine: remove,
+        clear,
+      }}
+    >
+      {children}
+    </CartContext.Provider>
+  )
+}

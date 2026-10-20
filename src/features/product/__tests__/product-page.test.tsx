@@ -2,15 +2,22 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { describe, expect, it } from 'vitest'
 
+import { CartProvider } from '@/app/providers/CartProvider'
+import { CatalogProvider } from '@/app/providers/CatalogProvider'
+
 import { ProductPage } from '../ProductPage'
 
 function renderProduct(path: string): string {
   return renderToStaticMarkup(
-    <MemoryRouter initialEntries={[path]}>
-      <Routes>
-        <Route path="/producto/:slug" element={<ProductPage />} />
-      </Routes>
-    </MemoryRouter>,
+    <CatalogProvider>
+      <CartProvider>
+        <MemoryRouter initialEntries={[path]}>
+          <Routes>
+            <Route path="/producto/:slug" element={<ProductPage />} />
+          </Routes>
+        </MemoryRouter>
+      </CartProvider>
+    </CatalogProvider>,
   )
 }
 
@@ -21,9 +28,9 @@ describe('ficha de producto', () => {
     expect(html).toContain('Camisa de lino Margarita')
     expect(html).toContain('$28,00')
     expect(html).toContain('4 unidades disponibles')
-    expect(html).toContain('Consultar por WhatsApp')
+    expect(html).toContain('Modo demo: el WhatsApp de la tienda no está configurado.')
     expect(html).toContain('Copiar mensaje')
-    expect(html).toContain('https://wa.me/584125550134?text=')
+    expect(html).not.toContain('https://wa.me/')
   })
 
   it('respeta la talla y el color elegidos en la URL', () => {

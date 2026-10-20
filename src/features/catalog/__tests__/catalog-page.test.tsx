@@ -2,15 +2,22 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { describe, expect, it } from 'vitest'
 
+import { CartProvider } from '@/app/providers/CartProvider'
+import { CatalogProvider } from '@/app/providers/CatalogProvider'
+
 import { CatalogPage } from '../CatalogPage'
 
 function renderCatalog(path: string): string {
   return renderToStaticMarkup(
-    <MemoryRouter initialEntries={[path]}>
-      <Routes>
-        <Route path="/catalogo" element={<CatalogPage />} />
-      </Routes>
-    </MemoryRouter>,
+    <CatalogProvider>
+      <CartProvider>
+        <MemoryRouter initialEntries={[path]}>
+          <Routes>
+            <Route path="/catalogo" element={<CatalogPage />} />
+          </Routes>
+        </MemoryRouter>
+      </CartProvider>
+    </CatalogProvider>,
   )
 }
 

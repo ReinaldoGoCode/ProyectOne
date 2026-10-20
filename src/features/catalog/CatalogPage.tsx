@@ -2,7 +2,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 
 import { ProductCard } from '@/components/ui/ProductCard'
 import { buttonClassName } from '@/components/ui/button'
-import { seedCatalog, seedCategories, seedVariants } from '@/data/seed'
+import { useCatalog } from '@/app/providers/catalogContext'
 import {
   DEFAULT_CATALOG_SORT,
   countActiveProducts,
@@ -11,14 +11,10 @@ import {
   isCatalogSort,
 } from '@/domain/catalog'
 import type { CatalogSort } from '@/domain/catalog'
-import type { Category, CategoryId } from '@/domain/types'
+import type { Category } from '@/domain/types'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 
 import { CatalogControls } from './CatalogControls'
-
-const CATEGORY_NAMES = new Map<CategoryId, string>(
-  seedCategories.map((category) => [category.id, category.name]),
-)
 
 interface ParamUpdate {
   readonly categorySlug?: string | null
@@ -28,24 +24,25 @@ interface ParamUpdate {
 
 export function CatalogPage() {
   useDocumentTitle('Catálogo · Norte Moda')
+  const { catalog } = useCatalog()
   const [searchParams, setSearchParams] = useSearchParams()
 
   const categorySlug = searchParams.get('categoria')
   const activeCategory: Category | null =
-    seedCategories.find((category) => category.slug === categorySlug) ?? null
+    catalog.categories.find((category) => category.slug === categorySlug) ?? null
 
   const search = searchParams.get('q') ?? ''
   const sortParam = searchParams.get('orden')
   const sort: CatalogSort = isCatalogSort(sortParam) ? sortParam : DEFAULT_CATALOG_SORT
 
-  const products = filterCatalog(seedCatalog, {
+  const products = filterCatalog(catalog, {
     categoryId: activeCategory?.id ?? null,
     search,
     sort,
   })
 
-  const counts = countActiveProductsByCategory(seedCatalog)
-  const total = countActiveProducts(seedCatalog)
+  const counts = countActiveProductsByCategory(catalog)
+  const total = countActiveProducts(catalog)
   const trimmedSearch = search.trim()
   const count = products.length
 
@@ -125,7 +122,7 @@ export function CatalogPage() {
 
       <section className="mx-auto w-full max-w-6xl px-5 py-8 sm:px-8 sm:py-10">
         <CatalogControls
-          categories={seedCategories}
+          categories={catalog.categories}
           activeCategoryId={activeCategory?.id ?? null}
           counts={counts}
           total={total}
@@ -150,8 +147,11 @@ export function CatalogPage() {
               <ProductCard
                 key={product.id}
                 product={product}
-                variants={seedVariants}
-                categoryName={CATEGORY_NAMES.get(product.categoryId) ?? 'Norte Moda'}
+                variants={catalog.variants}
+                categoryName={
+                  catalog.categories.find((category) => category.id === product.categoryId)?.name ??
+                  'Norte Moda'
+                }
               />
             ))}
           </div>
