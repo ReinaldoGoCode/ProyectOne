@@ -32,7 +32,7 @@ demostración de portafolio, no como alojamiento de una tienda comercial.
   métodos manuales, métricas y cola de atención de WhatsApp.
 - Webhook de WhatsApp Cloud API con firma HMAC, deduplicación, reintentos, estados, conversaciones y
   fallback a enlaces `wa.me`/mensaje copiable. Los envíos salientes están desactivados.
-- 195 pruebas de aplicación en 22 archivos y 33 comprobaciones de base de datos con PGlite.
+- 196 pruebas de aplicación en 22 archivos y 33 comprobaciones de base de datos con PGlite.
 
 ## Qué no incluye, ni simula
 
@@ -143,8 +143,10 @@ requeriría una función y un bucket adicionales, además de política de retenc
 ## Panel administrativo
 
 `/admin` es la única interfaz administrativa. Requiere Supabase Auth y una membresía activa en
-`public.admin_users`; no hay claves predeterminadas. Sin Supabase, solo muestra los pasos de
-configuración. El antiguo panel local sin autenticación fue retirado.
+`public.admin_users`; no hay claves predeterminadas. Sin Supabase, muestra los pasos de
+configuración y un enlace a `/admin?vista=demo`, una vista previa de solo lectura con datos
+ficticios que no inicia sesión ni guarda cambios. El antiguo panel local sin autenticación fue
+retirado.
 
 El panel cubre pedidos, revisión manual de pagos, logística, inventario por CSV, alertas de stock
 bajo, movimientos, imágenes y derivaciones de WhatsApp. Los pagos externos (tarjetas, PayPal, Binance
@@ -196,7 +198,7 @@ Verificado el 2026-10-22:
 
 | Comando             | Resultado                                |
 | ------------------- | ---------------------------------------- |
-| `pnpm check`        | Tipos, lint y 195 pruebas en 22 archivos |
+| `pnpm check`        | Tipos, lint y 196 pruebas en 22 archivos |
 | `pnpm test:db`      | 33 comprobaciones SQL/RLS correctas      |
 | `pnpm format:check` | Correcto                                 |
 | `pnpm build`        | Correcto; genera `dist/`                 |

@@ -31,7 +31,7 @@ La implementación actual incluye:
 - Gateway Supabase con cotización autoritativa, idempotencia, seguimiento privado y referencia de pago.
 - Panel remoto protegido con Supabase Auth para pedidos, inventario CSV, pagos, entregas y WhatsApp.
 - 11 migraciones, 16 Edge Functions, RLS y semilla de catálogo preparados sin proyecto enlazado.
-- Suite de 195 pruebas de aplicación y 33 comprobaciones SQL/RLS con PGlite.
+- Suite de 196 pruebas de aplicación y 33 comprobaciones SQL/RLS con PGlite.
 
 Todavía no hay backend compartido activo, pagos ni envíos reales. El flujo remoto no se ha probado
 contra Supabase Cloud ni Meta. Los pedidos locales no se comparten entre dispositivos. El checkout
@@ -206,6 +206,7 @@ Reglas transversales:
 | `/checkout`              | Compra invitada: modo local o remoto              | Implementada                 |
 | `/pedido?codigo=NM-0001` | Consulta local o remota con enlace privado        | Implementada                 |
 | `/admin`                 | Acceso autenticado a la administración remota     | Requiere configurar Supabase |
+| `/admin?vista=demo`      | Vista previa de solo lectura con datos ficticios  | Implementada                 |
 | `*`                      | Página 404 dentro del layout                      | Implementada                 |
 
 Parámetros del catálogo: `categoria` (slug), `q` (texto) y `orden` (`novedades`, `precio-asc`,
@@ -363,8 +364,9 @@ facturables siguen desactivadas.
 - Cada transición se agrega al historial. La entrega avanza en preparación, despacho y entrega.
 - Importa existencias por CSV con transacción, control de cambios obsoletos y movimientos auditables.
 - Administra imágenes, métricas, métodos manuales y derivaciones de WhatsApp.
-- El panel local sin autenticación fue retirado. Sin Supabase, `/admin` solo muestra la configuración
-  pendiente.
+- El panel local sin autenticación fue retirado. Sin Supabase, `/admin` muestra la configuración
+  pendiente y un enlace a `/admin?vista=demo`, una vista previa de solo lectura con datos ficticios.
+  Esa vista no crea sesión, no escribe datos y mantiene desactivadas las acciones sensibles.
 
 ### 6.10 Persistencia local
 
@@ -444,7 +446,7 @@ ninguna marca** y el proyecto no está afiliado a ninguna tienda.
 
 | Comando             | Resultado                                          |
 | ------------------- | -------------------------------------------------- |
-| `pnpm check`        | Correcto: tipos, lint y 195 pruebas en 22 archivos |
+| `pnpm check`        | Correcto: tipos, lint y 196 pruebas en 22 archivos |
 | `pnpm test:db`      | Correcto: 33 comprobaciones SQL/RLS con PGlite     |
 | `pnpm format:check` | Correcto                                           |
 | `pnpm build`        | Correcto; genera `dist/`                           |
@@ -632,7 +634,7 @@ excluidos por `.gitignore`; `.env.example` solo contiene nombres y valores vací
 - Compra directa aislada que conserva el carrito original.
 - Webhook de WhatsApp con firma, deduplicación, cola, estados, conversaciones y fallback.
 - 11 migraciones y 16 Edge Functions; validación con PGlite mediante `pnpm test:db` (33 comprobaciones).
-- 195 pruebas de aplicación en 22 archivos; `pnpm build` y `pnpm format:check` correctos.
+- 196 pruebas de aplicación en 22 archivos; `pnpm build` y `pnpm format:check` correctos.
 - Workflow de Cloudflare Pages preparado; no ejecutado por falta de credenciales.
 - El backend no se aplicó a Supabase Cloud y WhatsApp no se probó con Meta.
 
@@ -744,7 +746,7 @@ pnpm dev          # http://localhost:5173
 ### Verificación
 
 ```bash
-pnpm test         # 195 pruebas en 22 archivos (verificación actual)
+pnpm test         # 196 pruebas en 22 archivos (verificación actual)
 pnpm test:db      # 33 comprobaciones SQL/RLS con PGlite
 pnpm typecheck    # tsc --noEmit
 pnpm lint         # ESLint sin advertencias

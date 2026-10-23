@@ -61,6 +61,18 @@ describe('flujo de compra y acceso administrativo', () => {
     render(<ShopRoutes initialEntry="/admin" />)
 
     expect(await screen.findByText(/El backend aún no está configurado en este sitio/)).toBeTruthy()
+    expect(screen.getByRole('link', { name: 'Ver vista previa del panel' })).toBeTruthy()
+  })
+
+  it('muestra una vista previa de solo lectura del panel remoto', async () => {
+    render(<ShopRoutes initialEntry="/admin?vista=demo" />)
+
+    expect(await screen.findByText(/Demostración con datos ficticios/)).toBeTruthy()
+    expect(screen.getByText('NM-0107')).toBeTruthy()
+    expect(screen.getByText('Resumen del negocio')).toBeTruthy()
+
+    const reviewButton = screen.getByRole('button', { name: 'Confirmar pago revisado' })
+    expect((reviewButton as HTMLButtonElement).disabled).toBe(true)
   })
 
   it('retira la ruta del antiguo panel local sin autenticación', async () => {

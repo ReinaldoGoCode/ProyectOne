@@ -98,7 +98,7 @@ La [política oficial de mensajes de WhatsApp Business](https://business.whatsap
 
 ## Verificación local
 
-Verificación local de esta etapa: `pnpm check` completó TypeScript, ESLint y **195 pruebas en 22 archivos**; `pnpm test:db` aplicó las **11 migraciones** y el seed en PGlite con **33 comprobaciones SQL/RLS correctas**; `pnpm format:check` pasó; `pnpm build` generó el paquete; y la sintaxis de las **16 Edge Functions** se revisó sin errores. Rollup sigue mostrando dos advertencias de comentarios de Zod que no impiden compilar.
+Verificación local de esta etapa: `pnpm check` completó TypeScript, ESLint y **196 pruebas en 22 archivos**; `pnpm test:db` aplicó las **11 migraciones** y el seed en PGlite con **33 comprobaciones SQL/RLS correctas**; `pnpm format:check` pasó; `pnpm build` generó el paquete; y la sintaxis de las **16 Edge Functions** se revisó sin errores. Rollup sigue mostrando dos advertencias de comentarios de Zod que no impiden compilar.
 
 El `supabase` CLI está instalado como dependencia de desarrollo, pero no hay proyecto enlazado ni sesión autenticada. Docker Desktop falló con errores de E/S y poco espacio, así que no se ejecutó el stack local completo ni el runtime de Edge Functions. PGlite valida el SQL real, pero no sustituye PostgREST, Supabase Auth, Storage ni una prueba en la nube. La persistencia remota y los webhooks requieren una prueba contra una instancia Supabase antes de considerarse validados.
 

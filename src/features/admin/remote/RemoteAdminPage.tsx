@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { SyntheticEvent } from 'react'
 import type { Session } from '@supabase/supabase-js'
+import { Link, useSearchParams } from 'react-router-dom'
 
 import { buttonClassName } from '@/components/ui/button'
 import { useCatalog } from '@/app/providers/catalogContext'
@@ -24,6 +25,7 @@ import type {
   RemoteWhatsAppHandoff,
 } from '@/data/repositories/remoteOrderGateway'
 import type { Catalog } from '@/domain/types'
+import { AdminDemoPreview } from './AdminDemoPreview'
 import { RemoteInventoryPanel } from './RemoteInventoryPanel'
 import { RemotePaymentSettingsPanel } from './RemotePaymentSettingsPanel'
 import { formatMoney } from '@/domain/money'
@@ -88,6 +90,8 @@ export function RemoteAdminPage() {
   useDocumentTitle('Panel protegido · Norte Moda')
   const { refreshCatalog } = useCatalog()
   const [client] = useState(() => getSupabaseBrowserClient())
+  const [searchParams] = useSearchParams()
+  const demoPreview = !client && searchParams.get('vista') === 'demo'
   const [session, setSession] = useState<Session | null>(null)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -336,6 +340,10 @@ export function RemoteAdminPage() {
     return updated
   }
 
+  if (demoPreview) {
+    return <AdminDemoPreview />
+  }
+
   return (
     <section className="mx-auto w-full max-w-6xl px-5 py-10 sm:px-8 sm:py-14">
       <p className="text-[11px] font-medium tracking-[0.22em] text-brand-700 uppercase">
@@ -366,9 +374,27 @@ export function RemoteAdminPage() {
 
       {!client ? (
         <div className="mt-7 rounded-2xl border border-amber-900/10 bg-amber-50 p-5 text-sm leading-relaxed text-amber-950">
-          El backend aún no está configurado en este sitio. Completa los pasos de
-          `docs/IMPLEMENTACION_BACKEND.md`; por ahora, los pedidos de demostración siguen en este
-          navegador.
+          <p>
+            El backend aún no está configurado en este sitio. Completa los pasos de{' '}
+            <code>docs/IMPLEMENTACION_BACKEND.md</code> para activar la sesión protegida y las
+            operaciones reales.
+          </p>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <Link to="/admin?vista=demo" className={buttonClassName('primary', 'py-2')}>
+              Ver vista previa del panel
+            </Link>
+            <a
+              href="https://github.com/ReinaldoGoCode/ProyectOne/blob/main/docs/IMPLEMENTACION_BACKEND.md"
+              target="_blank"
+              rel="noreferrer"
+              className={buttonClassName('secondary', 'py-2')}
+            >
+              Abrir requisitos
+            </a>
+          </div>
+          <p className="mt-3 text-xs text-amber-900/80">
+            La vista previa usa datos ficticios, no permite iniciar sesión ni guardar cambios.
+          </p>
         </div>
       ) : recoveryMode ? (
         <form
