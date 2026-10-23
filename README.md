@@ -16,7 +16,8 @@ demostración de portafolio, no como alojamiento de una tienda comercial.
 **Repositorio:** <https://github.com/ReinaldoGoCode/ProyectOne>
 
 **Documentación:** [DOCUMENTACION.md](DOCUMENTACION.md) · **Backend y activación:**
-[docs/IMPLEMENTACION_BACKEND.md](docs/IMPLEMENTACION_BACKEND.md)
+[docs/IMPLEMENTACION_BACKEND.md](docs/IMPLEMENTACION_BACKEND.md) · **Puesta en producción:**
+[docs/DESPLIEGUE_PRODUCCION.md](docs/DESPLIEGUE_PRODUCCION.md)
 
 ---
 

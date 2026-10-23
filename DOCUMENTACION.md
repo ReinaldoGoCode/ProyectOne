@@ -132,6 +132,7 @@ norte-moda/
 ├─ docs/
 │  ├─ 01-alcance.md                 # problema, requisitos, flujos y criterios
 │  ├─ 03-decisiones.md              # registro de decisiones técnicas
+│  ├─ DESPLIEGUE_PRODUCCION.md      # runbook de Supabase, Cloudflare, Meta e IA
 │  └─ IMPLEMENTACION_BACKEND.md     # alcance real y activación pendiente
 ├─ DOCUMENTACION.md                 # este documento
 ├─ public/
