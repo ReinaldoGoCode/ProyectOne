@@ -3,6 +3,7 @@ import { multiplyCents, sumCents } from './money'
 import type {
   Customer,
   DeliveryMethod,
+  ExchangeQuote,
   FulfillmentStatus,
   Order,
   OrderItem,
@@ -35,7 +36,14 @@ export function getAllowedPaymentTransitions(status: PaymentStatus): readonly Pa
 
 export function getAllowedFulfillmentTransitions(
   status: FulfillmentStatus,
+  order?: Pick<Order, 'paymentStatus' | 'orderStatus'>,
 ): readonly FulfillmentStatus[] {
+  if (
+    status === 'nuevo' &&
+    (order?.paymentStatus !== 'pagado' || order.orderStatus !== 'confirmed')
+  ) {
+    return ['cancelado']
+  }
   return FULFILLMENT_TRANSITIONS[status]
 }
 
@@ -46,8 +54,9 @@ export function canTransitionPayment(status: PaymentStatus, next: PaymentStatus)
 export function canTransitionFulfillment(
   status: FulfillmentStatus,
   next: FulfillmentStatus,
+  order?: Pick<Order, 'paymentStatus' | 'orderStatus'>,
 ): boolean {
-  return FULFILLMENT_TRANSITIONS[status].includes(next)
+  return getAllowedFulfillmentTransitions(status, order).includes(next)
 }
 
 function createId(prefix: string): string {
@@ -85,10 +94,12 @@ export interface CreateOrderInput {
   readonly shippingAddress: ShippingAddress | null
   readonly shippingAgency: string | null
   readonly paymentMethod: PaymentMethod
+  readonly paymentInstructions?: string | null
   readonly paymentReference: string | null
   readonly customerNote: string | null
   readonly items: readonly OrderItem[]
   readonly shippingCents: number
+  readonly exchangeQuote?: ExchangeQuote
 }
 
 /**
@@ -120,6 +131,14 @@ export function createOrder(input: CreateOrderInput): Order {
 
   const history: readonly OrderStatusEvent[] = [
     {
+      axis: 'order',
+      id: createId('evt'),
+      at: createdAt,
+      from: null,
+      to: 'awaiting_payment',
+      note: 'Pedido creado; pendiente de pago',
+    },
+    {
       axis: 'payment',
       id: createId('evt'),
       at: createdAt,
@@ -146,12 +165,15 @@ export function createOrder(input: CreateOrderInput): Order {
     shippingAddress: input.shippingAddress,
     shippingAgency: input.shippingAgency,
     paymentMethod: input.paymentMethod,
+    paymentInstructions: input.paymentInstructions ?? null,
     paymentReference: input.paymentReference,
     customerNote: input.customerNote,
     items: input.items,
     subtotalCents,
     shippingCents: input.shippingCents,
     totalCents,
+    ...(input.exchangeQuote ? { exchangeQuote: input.exchangeQuote } : {}),
+    orderStatus: 'awaiting_payment',
     paymentStatus: 'pendiente',
     fulfillmentStatus: 'nuevo',
     notes: [],
@@ -182,6 +204,7 @@ export function transitionPaymentStatus(
   next: PaymentStatus,
   note: string | null = null,
   at: string = new Date().toISOString(),
+  options: { readonly inventoryAvailable?: boolean } = {},
 ): Order {
   if (!canTransitionPayment(order.paymentStatus, next)) {
     throw new RangeError(`Transición de pago inválida: ${order.paymentStatus} → ${next}`)
@@ -196,10 +219,37 @@ export function transitionPaymentStatus(
     note: normalizedNote(note),
   }
 
+  let orderStatus = order.orderStatus
+  const events: OrderStatusEvent[] = [...order.history, event]
+  if (next === 'pagado') {
+    orderStatus = options.inventoryAvailable ? 'confirmed' : 'inventory_exception'
+    events.push({
+      axis: 'order',
+      id: createId('evt'),
+      at,
+      from: order.orderStatus,
+      to: orderStatus,
+      note: options.inventoryAvailable
+        ? 'Pago aprobado manualmente; stock comprobado.'
+        : 'Pago aprobado manualmente; requiere resolver disponibilidad de inventario.',
+    })
+  } else if (next === 'cancelado') {
+    orderStatus = 'cancelled'
+    events.push({
+      axis: 'order',
+      id: createId('evt'),
+      at,
+      from: order.orderStatus,
+      to: orderStatus,
+      note: 'Pedido cancelado.',
+    })
+  }
+
   return {
     ...order,
     paymentStatus: next,
-    history: [...order.history, event],
+    orderStatus,
+    history: events,
   }
 }
 
@@ -209,7 +259,10 @@ export function transitionFulfillmentStatus(
   note: string | null = null,
   at: string = new Date().toISOString(),
 ): Order {
-  if (!canTransitionFulfillment(order.fulfillmentStatus, next)) {
+  if (next === 'preparando' && !canTransitionFulfillment(order.fulfillmentStatus, next, order)) {
+    throw new RangeError('Solo se puede preparar un pedido pagado y con stock confirmado.')
+  }
+  if (!canTransitionFulfillment(order.fulfillmentStatus, next, order)) {
     throw new RangeError(`Transición de entrega inválida: ${order.fulfillmentStatus} → ${next}`)
   }
 
@@ -227,6 +280,29 @@ export function transitionFulfillmentStatus(
     fulfillmentStatus: next,
     history: [...order.history, event],
   }
+}
+
+/** Resolves a paid order after the operator replenishes missing stock. */
+export function resolveInventoryException(
+  order: Order,
+  inventoryAvailable: boolean,
+  at: string = new Date().toISOString(),
+): Order {
+  if (order.paymentStatus !== 'pagado' || order.orderStatus !== 'inventory_exception') {
+    throw new RangeError('El pedido no tiene una incidencia de inventario pendiente.')
+  }
+  if (!inventoryAvailable) {
+    throw new RangeError('Todavía no hay stock suficiente para confirmar este pedido.')
+  }
+  const event: OrderStatusEvent = {
+    axis: 'order',
+    id: createId('evt'),
+    at,
+    from: 'inventory_exception',
+    to: 'confirmed',
+    note: 'Inventario revalidado y descontado por el administrador de la demo.',
+  }
+  return { ...order, orderStatus: 'confirmed', history: [...order.history, event] }
 }
 
 export function appendOrderNote(

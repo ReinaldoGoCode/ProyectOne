@@ -52,6 +52,23 @@ export interface Variant {
   readonly stock: number
 }
 
+export type InventoryMovementReason = 'receipt' | 'sale' | 'adjustment' | 'import'
+
+/** A durable local demo record for every stock change. Positive delta adds units. */
+export interface InventoryMovement {
+  readonly id: string
+  readonly variantId: VariantId | null
+  readonly sku: string
+  readonly productName: string
+  readonly size: Size
+  readonly color: string
+  readonly delta: number
+  readonly reason: InventoryMovementReason
+  readonly note: string | null
+  readonly orderId: string | null
+  readonly createdAt: string
+}
+
 /** Catálogo completo en memoria: lo que hoy viene del seed y mañana de Supabase. */
 export interface Catalog {
   readonly categories: readonly Category[]
@@ -72,7 +89,18 @@ export type PaymentStatus = 'pendiente' | 'por_verificar' | 'pagado' | 'rechazad
 
 export type FulfillmentStatus = 'nuevo' | 'preparando' | 'despachado' | 'entregado' | 'cancelado'
 
-export type PaymentMethod = 'pago_movil' | 'transferencia' | 'efectivo'
+export type OrderStatus = 'awaiting_payment' | 'confirmed' | 'inventory_exception' | 'cancelled'
+
+export interface ExchangeQuote {
+  /** Rate in VES per USD. Decimal text avoids floating point persistence. */
+  readonly vesPerUsd: string
+  readonly source: 'demo_ficticia' | 'bcv'
+  readonly quotedAt: string
+  readonly expiresAt: string
+}
+
+export type PaymentMethod =
+  'pago_movil' | 'transferencia' | 'efectivo' | 'efectivo_ves' | 'efectivo_usd'
 
 export type DeliveryMethod = 'delivery_local' | 'envio_nacional' | 'retiro'
 
@@ -113,7 +141,7 @@ export interface OrderNote {
 }
 
 /**
- * Cambio de estado en uno de los dos ejes del pedido. `from` es `null`
+ * Cambio de estado en pedido, pago o entrega. `from` es `null`
  * únicamente en el evento de creación.
  */
 export type OrderStatusEvent =
@@ -133,6 +161,14 @@ export type OrderStatusEvent =
       readonly to: FulfillmentStatus
       readonly note: string | null
     }
+  | {
+      readonly axis: 'order'
+      readonly id: string
+      readonly at: string
+      readonly from: OrderStatus | null
+      readonly to: OrderStatus
+      readonly note: string | null
+    }
 
 export interface Order {
   readonly id: string
@@ -146,6 +182,8 @@ export interface Order {
   /** Agencia escrita por el comprador; sin integración con MRW ni ZOOM. */
   readonly shippingAgency: string | null
   readonly paymentMethod: PaymentMethod
+  /** Public method instructions captured at checkout; absent on older local orders. */
+  readonly paymentInstructions?: string | null | undefined
   readonly paymentReference: string | null
   /** Nota que dejó el comprador al crear el pedido. */
   readonly customerNote: string | null
@@ -153,6 +191,8 @@ export interface Order {
   readonly subtotalCents: number
   readonly shippingCents: number
   readonly totalCents: number
+  readonly exchangeQuote?: ExchangeQuote | undefined
+  readonly orderStatus: OrderStatus
   readonly paymentStatus: PaymentStatus
   readonly fulfillmentStatus: FulfillmentStatus
   readonly notes: readonly OrderNote[]

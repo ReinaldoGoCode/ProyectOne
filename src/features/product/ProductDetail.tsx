@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 
 import { useCart } from '@/app/providers/cartContext'
 import { GarmentArt } from '@/components/ui/GarmentArt'
@@ -17,7 +17,20 @@ import {
   listSizes,
 } from '@/domain/product'
 import type { Catalog, Product, Size } from '@/domain/types'
-import { buildProductInquiryMessage, IS_WHATSAPP_CONFIGURED } from '@/lib/whatsapp'
+import {
+  buildProductInquiryMessage,
+  buildWhatsAppUrl,
+  IS_WHATSAPP_CONFIGURED,
+  STORE_WHATSAPP_NUMBER,
+} from '@/lib/whatsapp'
+import {
+  createRemoteWhatsAppPurchaseContext,
+  type RemoteWhatsAppPurchaseContext,
+} from '@/data/repositories/remoteOrderGateway'
+import {
+  createDirectCheckoutIntent,
+  resolveDirectCheckoutSelection,
+} from '@/features/checkout/directCheckout'
 
 import { ProductVariantSelector } from './ProductVariantSelector'
 
@@ -44,8 +57,15 @@ function describeStock(stock: number): string {
 
 export function ProductDetail({ product, catalog }: ProductDetailProps) {
   const { addToCart } = useCart()
-  const [cartFeedback, setCartFeedback] = useState('')
+  const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
+  const [cartFeedback, setCartFeedback] = useState('')
+  const [quantity, setQuantity] = useState(() => searchParams.get('cantidad') ?? '1')
+  const [buyNowError, setBuyNowError] = useState('')
+  const [isBuyingNow, setIsBuyingNow] = useState(false)
+  const [whatsAppContext, setWhatsAppContext] = useState<RemoteWhatsAppPurchaseContext | null>(null)
+  const [whatsAppContextError, setWhatsAppContextError] = useState('')
+  const [isPreparingWhatsAppContext, setIsPreparingWhatsAppContext] = useState(false)
 
   const category = catalog.categories.find((item) => item.id === product.categoryId)
   const variants = getProductVariants(catalog.variants, product.id)
@@ -75,6 +95,7 @@ export function ProductDetail({ product, catalog }: ProductDetailProps) {
     selectedColor === null ? [] : getAvailableSizesForColor(variants, product.id, selectedColor)
 
   function applySelection(next: { readonly size: Size; readonly color: string }): void {
+    setBuyNowError('')
     const nextParams = new URLSearchParams(searchParams)
     nextParams.set('talla', next.size)
     nextParams.set('color', next.color)
@@ -123,10 +144,88 @@ export function ProductDetail({ product, catalog }: ProductDetailProps) {
       )
     : undefined
 
+  const requestedQuantity = quantity.trim() === '' ? Number.NaN : Number(quantity)
+  const quantityIsValid =
+    selectedVariant !== undefined &&
+    Number.isSafeInteger(requestedQuantity) &&
+    requestedQuantity > 0 &&
+    requestedQuantity <= selectedVariant.stock
+  const quantityError =
+    selectedVariant === undefined
+      ? 'Elige una variante disponible.'
+      : quantityIsValid
+        ? ''
+        : `Elige una cantidad entre 1 y ${String(selectedVariant.stock)} unidades disponibles.`
+
   function handleAddToCart(): void {
-    if (selectedVariant === undefined) return
-    const error = addToCart(selectedVariant.id)
+    if (selectedVariant === undefined || !quantityIsValid) return
+    const error = addToCart(selectedVariant.id, requestedQuantity)
     setCartFeedback(error ?? 'Añadida al carrito.')
+  }
+
+  function handleBuyNow(): void {
+    setBuyNowError('')
+    if (selectedVariant === undefined || !quantityIsValid) {
+      setBuyNowError(quantityError)
+      return
+    }
+
+    const selection = resolveDirectCheckoutSelection(catalog, selectedVariant.id, requestedQuantity)
+    if (selection.status !== 'ready') {
+      setBuyNowError(selection.message)
+      return
+    }
+
+    const intentToken = createDirectCheckoutIntent(
+      selection.line.variantId,
+      selection.line.quantity,
+    )
+    if (intentToken === null) {
+      setBuyNowError(
+        'No pudimos preparar la compra en esta pestaña. El carrito que ya tenías sigue intacto; inténtalo de nuevo.',
+      )
+      return
+    }
+
+    setIsBuyingNow(true)
+    try {
+      void Promise.resolve(navigate(`/checkout?compra=${encodeURIComponent(intentToken)}`)).catch(
+        () => {
+          setIsBuyingNow(false)
+          setBuyNowError(
+            'No se pudo abrir el checkout. El carrito sigue intacto; inténtalo de nuevo.',
+          )
+        },
+      )
+    } catch {
+      setIsBuyingNow(false)
+      setBuyNowError('No se pudo abrir el checkout. El carrito sigue intacto; inténtalo de nuevo.')
+    }
+  }
+
+  async function handleWhatsAppPurchase(): Promise<void> {
+    setWhatsAppContextError('')
+    setWhatsAppContext(null)
+    if (selectedVariant === undefined || !quantityIsValid) {
+      setWhatsAppContextError(quantityError)
+      return
+    }
+    setIsPreparingWhatsAppContext(true)
+    try {
+      const context = await createRemoteWhatsAppPurchaseContext({
+        variantId: selectedVariant.id,
+        quantity: requestedQuantity,
+      })
+      setWhatsAppContext(context)
+    } catch (caught) {
+      setWhatsAppContextError(
+        caught instanceof Error
+          ? caught.message
+          : 'No se pudo preparar el contexto de compra para WhatsApp.',
+      )
+    } finally {
+      setIsPreparingWhatsAppContext(false)
+    }
   }
 
   return (
@@ -212,12 +311,43 @@ export function ProductDetail({ product, catalog }: ProductDetailProps) {
                 {describeStock(stock)}
               </p>
             </div>
+
+            <label className="mt-6 block max-w-40 text-xs font-medium text-stone-600">
+              Cantidad
+              <input
+                aria-invalid={!quantityIsValid}
+                aria-describedby={
+                  quantityIsValid
+                    ? 'product-quantity-help'
+                    : 'product-quantity-help product-quantity-error'
+                }
+                type="number"
+                inputMode="numeric"
+                min={1}
+                max={stock}
+                step={1}
+                value={quantity}
+                onChange={(event) => {
+                  setQuantity(event.currentTarget.value)
+                  setBuyNowError('')
+                }}
+                className="mt-1.5 min-h-11 w-full rounded-xl bg-white px-3 text-sm text-ink ring-1 ring-stone-900/12 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30"
+              />
+              <span id="product-quantity-help" className="mt-1 block font-normal text-stone-500">
+                Máximo {String(stock)} por compra.
+              </span>
+              {!quantityIsValid ? (
+                <span id="product-quantity-error" role="alert" className="mt-1 block text-red-800">
+                  {quantityError}
+                </span>
+              ) : null}
+            </label>
           </div>
 
           <div className="mt-8">
             <button
               type="button"
-              disabled={stock === 0 || selectedVariant === undefined}
+              disabled={!quantityIsValid}
               onClick={handleAddToCart}
               className={buttonClassName(
                 'primary',
@@ -232,6 +362,91 @@ export function ProductDetail({ product, catalog }: ProductDetailProps) {
             <Link to="/carrito" className={buttonClassName('secondary', 'mt-2 w-full')}>
               Ver carrito
             </Link>
+            <button
+              type="button"
+              disabled={!quantityIsValid || isBuyingNow}
+              aria-busy={isBuyingNow}
+              onClick={handleBuyNow}
+              className={buttonClassName(
+                'primary',
+                'mt-2 w-full disabled:cursor-not-allowed disabled:opacity-40',
+              )}
+            >
+              {isBuyingNow ? 'Preparando compra…' : 'Comprar ahora'}
+            </button>
+            <p
+              aria-live="polite"
+              role={buyNowError ? 'alert' : undefined}
+              className="mt-2 min-h-4 text-center text-xs text-red-800"
+            >
+              {buyNowError}
+            </p>
+            <button
+              type="button"
+              disabled={!quantityIsValid || isPreparingWhatsAppContext}
+              aria-busy={isPreparingWhatsAppContext}
+              onClick={() => void handleWhatsAppPurchase()}
+              className={buttonClassName(
+                'secondary',
+                'mt-2 w-full disabled:cursor-not-allowed disabled:opacity-40',
+              )}
+            >
+              {isPreparingWhatsAppContext ? 'Preparando consulta…' : 'Comprar por WhatsApp'}
+            </button>
+            {whatsAppContextError ? (
+              <p role="alert" className="mt-2 text-center text-xs text-red-800">
+                {whatsAppContextError}
+              </p>
+            ) : null}
+            {whatsAppContext ? (
+              <div className="mt-3 rounded-2xl bg-emerald-50 p-4 text-sm text-emerald-950">
+                <p>
+                  Contexto listo: {whatsAppContext.product.name}, talla{' '}
+                  {whatsAppContext.product.size}, color {whatsAppContext.product.color}, cantidad{' '}
+                  {whatsAppContext.product.quantity}. El servidor volverá a verificar precio y stock
+                  cuando llegue el mensaje.
+                </p>
+                <p className="mt-1 text-xs">
+                  La referencia vence el{' '}
+                  {new Date(whatsAppContext.expiresAt).toLocaleString('es-VE')}.
+                </p>
+                {whatsAppContext.whatsappUrl ? (
+                  <a
+                    href={whatsAppContext.whatsappUrl}
+                    target="_blank"
+                    rel="noreferrer noopener"
+                    className={buttonClassName('primary', 'mt-3 w-full')}
+                  >
+                    Abrir WhatsApp con el contexto
+                  </a>
+                ) : (
+                  <>
+                    <p className="mt-2 text-xs leading-relaxed">
+                      Falta configurar el número de WhatsApp del negocio en el backend. El contexto
+                      no se asociará hasta que envíes esta referencia al número de la tienda.
+                    </p>
+                    <WhatsAppActions
+                      message={whatsAppContext.prefilledMessage}
+                      label="Copiar referencia de compra"
+                      variant="secondary"
+                    />
+                    {IS_WHATSAPP_CONFIGURED && STORE_WHATSAPP_NUMBER ? (
+                      <a
+                        href={buildWhatsAppUrl(
+                          whatsAppContext.prefilledMessage,
+                          STORE_WHATSAPP_NUMBER,
+                        )}
+                        target="_blank"
+                        rel="noreferrer noopener"
+                        className={buttonClassName('primary', 'mt-3 w-full')}
+                      >
+                        Abrir WhatsApp con el contexto
+                      </a>
+                    ) : null}
+                  </>
+                )}
+              </div>
+            ) : null}
             <WhatsAppActions
               message={inquiryMessage}
               label="Consultar por WhatsApp"

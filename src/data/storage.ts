@@ -6,6 +6,7 @@ export interface KeyValueStorage {
 
 export const STORAGE_KEYS = {
   catalog: 'norte-moda:catalog:v1',
+  catalogSnapshot: 'norte-moda:catalog-snapshot:v1',
   orders: 'norte-moda:orders:v1',
   cart: 'norte-moda:cart:v1',
 } as const
@@ -60,6 +61,7 @@ export function removeStoredValue(storage: KeyValueStorage | null, key: string):
 /** Restaura la demo: catálogo, pedidos y carrito vuelven a su estado inicial. */
 export function resetDemoData(storage: KeyValueStorage | null = getBrowserStorage()): void {
   removeStoredValue(storage, STORAGE_KEYS.catalog)
+  removeStoredValue(storage, STORAGE_KEYS.catalogSnapshot)
   removeStoredValue(storage, STORAGE_KEYS.orders)
   removeStoredValue(storage, STORAGE_KEYS.cart)
 }

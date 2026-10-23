@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest'
 
-import { formatMoney, multiplyCents, sumCents, toCents } from '../money'
+import {
+  convertUsdCentsToVesCents,
+  formatMoney,
+  formatVesCents,
+  multiplyCents,
+  sumCents,
+  toCents,
+} from '../money'
 
 describe('formatMoney', () => {
   it('formatea centavos con dos decimales y símbolo de dólar', () => {
@@ -70,5 +77,21 @@ describe('toCents', () => {
   it('rechaza importes negativos o no finitos', () => {
     expect(() => toCents(-1)).toThrow(RangeError)
     expect(() => toCents(Number.POSITIVE_INFINITY)).toThrow(RangeError)
+  })
+})
+
+describe('conversión VES referencial', () => {
+  it('convierte con decimal fijo y redondea a céntimos', () => {
+    expect(convertUsdCentsToVesCents(1999, '40.00')).toBe(79_960)
+    expect(convertUsdCentsToVesCents(1, '0.5')).toBe(1)
+  })
+
+  it('rechaza tasas no positivas o con precisión no admitida', () => {
+    expect(() => convertUsdCentsToVesCents(100, '0')).toThrow(RangeError)
+    expect(() => convertUsdCentsToVesCents(100, '40.0000001')).toThrow(RangeError)
+  })
+
+  it('formatea céntimos de bolívar', () => {
+    expect(formatVesCents(79_960)).toBe('Bs.S\u00a0799,60')
   })
 })

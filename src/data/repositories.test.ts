@@ -96,6 +96,28 @@ describe('repositorios locales', () => {
     expect(repository.findByCode(' nm-0001 ')?.id).toBe(order.id)
   })
 
+  it('migra los pedidos locales anteriores sin borrar su historial', () => {
+    const storage = new MemoryStorage()
+    const order = demoOrder()
+    const legacy = JSON.parse(JSON.stringify(order)) as Record<string, unknown>
+    delete legacy['orderStatus']
+    if (Array.isArray(legacy['history'])) {
+      legacy['history'] = (legacy['history'] as unknown[]).filter(
+        (event) =>
+          typeof event === 'object' && event !== null && 'axis' in event && event.axis !== 'order',
+      )
+    }
+    storage.setItem(STORAGE_KEYS.orders, JSON.stringify([legacy]))
+
+    const migrated = createOrderRepository(storage).findByCode(order.code)
+    expect(migrated?.orderStatus).toBe('awaiting_payment')
+    expect(migrated?.history.map((event) => event.axis)).toEqual([
+      'payment',
+      'fulfillment',
+      'order',
+    ])
+  })
+
   it('descarta pedidos dañados en lugar de cargar totales inconsistentes', () => {
     const storage = new MemoryStorage()
     const order = { ...demoOrder(), totalCents: 1 }

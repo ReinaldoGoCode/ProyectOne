@@ -39,10 +39,21 @@ jobs:
       - name: Verificar tipos, lint y pruebas
         run: pnpm check
 
+      - name: Verificar migraciones y RLS
+        run: pnpm test:db
+
+      - name: Verificar formato
+        run: pnpm format:check
+
       - name: Construir el sitio
         run: pnpm build
         env:
           VITE_BASE_PATH: /ProyectOne/
+          # Valores públicos del proyecto Supabase, no secretos. Si no están
+          # configurados, el build publica el modo demo local.
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
+          VITE_STORE_WHATSAPP_NUMBER: ${{ vars.VITE_STORE_WHATSAPP_NUMBER }}
 
       - name: Copiar index.html como 404 para las rutas del cliente
         run: cp dist/index.html dist/404.html

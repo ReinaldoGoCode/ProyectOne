@@ -16,6 +16,13 @@ const CURRENCY_FORMATTER = new Intl.NumberFormat('es-VE', {
   maximumFractionDigits: 2,
 })
 
+const VES_FORMATTER = new Intl.NumberFormat('es-VE', {
+  style: 'currency',
+  currency: 'VES',
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 0,
+})
+
 /** Un monto válido es un entero seguro y no negativo de centavos. */
 export function isValidCents(value: unknown): value is number {
   return typeof value === 'number' && Number.isSafeInteger(value) && value >= 0
@@ -47,6 +54,32 @@ export function toCents(amount: number): number {
 export function formatMoney(cents: number): string {
   assertCents(cents, 'El monto')
   return CURRENCY_FORMATTER.format(cents / CENTS_PER_UNIT)
+}
+
+/** Converts USD cents using a decimal-string quote, rounding half up to VES cents. */
+export function convertUsdCentsToVesCents(usdCents: number, vesPerUsd: string): number {
+  assertCents(usdCents, 'El monto en USD')
+  if (!/^(?:0|[1-9]\d*)(?:\.\d{1,6})?$/.test(vesPerUsd)) {
+    throw new RangeError('La tasa debe ser un decimal positivo con hasta seis posiciones.')
+  }
+
+  const [whole = '0', fraction = ''] = vesPerUsd.split('.')
+  const scale = 1_000_000n
+  const rateMicros = BigInt(whole) * scale + BigInt(fraction.padEnd(6, '0'))
+  if (rateMicros <= 0n) throw new RangeError('La tasa debe ser mayor que cero.')
+  const converted = (BigInt(usdCents) * rateMicros + scale / 2n) / scale
+  if (converted > BigInt(Number.MAX_SAFE_INTEGER)) {
+    throw new RangeError('El monto convertido excede el rango entero seguro.')
+  }
+  return Number(converted)
+}
+
+/** Formats VES cents without converting through a floating-point amount. */
+export function formatVesCents(cents: number): string {
+  assertCents(cents, 'El monto en bolívares')
+  const units = Math.floor(cents / CENTS_PER_UNIT)
+  const fractional = cents % CENTS_PER_UNIT
+  return `${VES_FORMATTER.format(units)},${String(fractional).padStart(2, '0')}`
 }
 
 /** Suma montos en centavos y falla si alguno es inválido o si hay desbordamiento. */

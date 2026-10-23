@@ -11,6 +11,9 @@ coverage/
 .env.*
 !.env.example
 *.local
+supabase/.temp/
+supabase/.branches/
+supabase/.env
 
 # Sistema operativo y editores
 .DS_Store

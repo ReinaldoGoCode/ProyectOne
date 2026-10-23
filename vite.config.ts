@@ -27,8 +27,6 @@ function staticRouteCopies(): Plugin {
         'checkout',
         'pedido',
         'admin',
-        'admin/productos',
-        'admin/pedidos',
         ...seedProducts.map((product) => `producto/${product.slug}`),
       ]
 

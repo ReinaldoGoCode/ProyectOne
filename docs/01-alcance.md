@@ -198,10 +198,20 @@ recortarse porque son las que vuelven presentable el proyecto.
 
 ## 9. Supuestos confirmados
 
-1. Solo USD con dos decimales; sin bolívares ni tasa en v1.
-2. El stock se descuenta al confirmar el pedido y se valida en el cliente; no es autoritativo hasta
-   Supabase y se documenta como limitación.
-3. No hay cuentas de cliente: checkout como invitado y consulta por código.
-4. El panel usa una contraseña de desarrollo y avisa que no hay seguridad real.
-5. Envío con tarifa fija por método: local 3,00 / nacional 5,00 / retiro 0,00.
+1. El precio base permanece en USD. El checkout enseña VES solo con tasa ficticia de prueba; no es BCV.
+2. No se reserva stock al crear. En la demo se revalida al aprobar pago; el panel local no garantiza
+   concurrencia entre dispositivos. La migración Supabase hace la revalidación y el descuento en una
+   transacción.
+3. No hay cuentas de cliente; el código local no es suficiente para acceder a pedidos remotos, que
+   requieren además un token aleatorio privado.
+4. El panel local no tiene autenticación. Las funciones remotas exigen Supabase Auth y pertenencia
+   activa a `admin_users`; falta configurar la cuenta y conectar el panel.
+5. Envío con tarifas fijas ficticias por método: local 3,00 / nacional 5,00 / retiro 0,00.
 6. Tailwind con componentes propios, sin librería de UI.
+
+## 10. Actualización de implementación · 2026-10-21
+
+El estado ejecutable y las dependencias externas pendientes están en
+[IMPLEMENTACION_BACKEND.md](IMPLEMENTACION_BACKEND.md). La migración y las funciones Edge están
+preparadas, pero todavía no están aplicadas a un proyecto Supabase; el checkout y el panel publicados
+siguen siendo de demostración local.

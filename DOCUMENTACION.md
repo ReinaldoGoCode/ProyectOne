@@ -3,34 +3,39 @@
 > Tienda conceptual de ropa para pequeños comercios venezolanos. Proyecto de portafolio con datos
 > ficticios. El repositorio contiene configuración de despliegue para GitHub Pages.
 >
-> **Última actualización:** 2026-10-20 · **Versión de la aplicación:** 0.5.0 · **Copia de trabajo:** esta carpeta no contiene metadatos `.git`.
+> **Última actualización:** 2026-10-22 · **Versión de la aplicación:** 0.5.0 · **Repositorio Git:** reconstruido desde `origin/main`.
 >
-> **Versión publicada para pruebas:** <https://reinaldogocode.github.io/ProyectOne/>. El workflow de GitHub Pages completó correctamente el despliegue del flujo de compra y del panel demo.
+> **Versión publicada solo como demo:** <https://reinaldogocode.github.io/ProyectOne/>. GitHub Pages no está permitido como alojamiento gratuito para una tienda comercial; no usarla con transacciones ni datos reales. Consultar [límites de GitHub Pages](https://docs.github.com/en/pages/getting-started-with-github-pages/github-pages-limits). El workflow publica el frontend estático en ese entorno.
 >
 > **Repositorio:** <https://github.com/ReinaldoGoCode/ProyectOne>
+>
+> **Estado de backend:** el código de Supabase está preparado y validado contra PostgreSQL embebido, pero no desplegado ni conectado a una instancia real. Consulta [IMPLEMENTACION_BACKEND.md](docs/IMPLEMENTACION_BACKEND.md) para el alcance real y los requisitos pendientes.
 
 ---
 
 ## 1. Resumen ejecutivo
 
-Norte Moda es una tienda conceptual para mostrar un flujo comercial completo dentro de una
-demostración local: catálogo, selección de variantes, carrito, checkout, creación y consulta de
-pedidos, y panel de productos y pedidos. Los datos son ficticios; pago y entrega se actualizan a mano.
+Norte Moda es una tienda conceptual para mostrar un flujo comercial completo: catálogo, selección de
+variantes, carrito, checkout, creación y consulta de pedidos, revisión manual de pagos y panel
+administrativo. Los datos son ficticios; pago y entrega se actualizan a mano.
 
 La implementación actual incluye:
 
 - Base técnica con React 19, TypeScript estricto, Vite 7 y Tailwind 4.
-- Modelo de dominio con dinero en centavos y dos ejes de estado para pedidos.
+- Modelo de dominio con dinero en centavos y estados separados de pedido, pago y entrega.
 - Catálogo ficticio de 6 categorías, 21 prendas y 171 variantes.
 - Portada editorial, catálogo con filtros/búsqueda/orden y página 404.
 - Ficha de producto con selector de talla y color, stock y combinaciones agotadas deshabilitadas.
 - Persistencia local tipada para catálogo, carrito y pedidos, con recuperación ante datos dañados.
-- Checkout de invitado y consulta de pedidos por código en el mismo navegador.
-- Panel demo para productos, variantes, stock, estados de pago y entrega con historial.
-- Suite de pruebas de dominio, repositorios, interfaz y flujo de compra.
+- Checkout de invitado, compra directa sin borrar el carrito y consulta de pedidos.
+- Gateway Supabase con cotización autoritativa, idempotencia, seguimiento privado y referencia de pago.
+- Panel remoto protegido con Supabase Auth para pedidos, inventario CSV, pagos, entregas y WhatsApp.
+- 11 migraciones, 16 Edge Functions, RLS y semilla de catálogo preparados sin proyecto enlazado.
+- Suite de 195 pruebas de aplicación y 33 comprobaciones SQL/RLS con PGlite.
 
-No hay backend compartido, autenticación de producción, pagos ni envíos reales. Los pedidos y cambios
-locales no se comparten entre dispositivos.
+Todavía no hay backend compartido activo, pagos ni envíos reales. El flujo remoto no se ha probado
+contra Supabase Cloud ni Meta. Los pedidos locales no se comparten entre dispositivos. El checkout
+muestra una conversión ficticia de prueba; no consulta la tasa BCV.
 
 ---
 
@@ -63,27 +68,31 @@ coordina por conversación; el sistema registra estados y evita vender stock ine
 - Consulta de una prenda por WhatsApp y copia del mensaje.
 - Carrito persistido por variante, cantidades, revalidación de stock y resumen monetario.
 - Checkout invitado con validación, métodos de entrega y pago previstos, sin cédula ni correo.
-- Creación de pedidos con código, precios y descripciones congelados y confirmación local.
-- Consulta de pedido por código con estados separados, historial y resumen copiable.
-- Panel local para productos, variantes, SKU, stock y pedidos.
+- Compra directa aislada que conserva el carrito existente hasta completar la compra normal.
+- Creación de pedidos con código, precios y descripciones congelados y confirmación local o remota.
+- Consulta de pedido por código; en modo remoto, enlace privado con token y referencia de pago.
+- Panel remoto con autenticación, autorización en servidor, pedidos, inventario CSV, imágenes,
+  métodos manuales, métricas y derivaciones de WhatsApp.
 - Persistencia local con validación de datos y opción para restaurar la demo.
 - Página 404 y navegación completa entre portada, catálogo y ficha.
 - Datos ficticios centralizados y pruebas de integridad del seed.
-- Workflow configurado para verificar, construir y desplegar cuando se publica desde `main`.
+- Migraciones, funciones Edge, gateway y semilla preparados; SQL validado con PostgreSQL embebido.
+- Workflows para verificar, construir y desplegar en Pages o Cloudflare Pages.
 
 ### Pendiente para producción
 
-- Backend compartido, transacciones y reserva de inventario.
-- Autenticación real, roles y políticas de acceso del servidor.
-- Pagos, despacho y seguimiento con proveedores configurados y revisados.
-- Almacenamiento de imágenes y proceso de privacidad para datos de clientes.
+- Crear un proyecto Supabase, aplicar las migraciones y desplegar/validar las Edge Functions.
+- Crear la cuenta administradora y probar autenticación, autorización y recuperación.
+- Configurar alojamiento apropiado para el comercio y definir respaldo y retención de datos.
+- Elegir proveedor de tasa BCV, pasarela de pagos y logística; hoy son manuales.
+- Probar WhatsApp contra Meta con un número de prueba y autorización expresa.
+- Storage de imágenes y proceso de privacidad para datos de clientes.
 - E2E con Playwright y auditoría completa de accesibilidad con tecnologías de asistencia.
 
 ### Fuera de alcance
 
-Pagos reales, confirmación bancaria automática, integraciones con MRW o ZOOM, automatización oficial
-de WhatsApp, cuentas de cliente, cupones, tasas de cambio automáticas y subida de imágenes a
-Storage.
+Pagos reales, confirmación bancaria automática, integraciones con MRW o ZOOM, envío automático de
+WhatsApp sin credenciales, cuentas de cliente, cupones y tasas de cambio automáticas.
 
 ---
 
@@ -119,44 +128,45 @@ Decisiones de compatibilidad relevantes:
 
 ```text
 norte-moda/
-├─ .github/workflows/deploy.yml     # CI: verifica, construye y publica
+├─ .github/workflows/               # Pages y Cloudflare Pages
 ├─ docs/
 │  ├─ 01-alcance.md                 # problema, requisitos, flujos y criterios
-│  └─ 03-decisiones.md              # 21 ADR
+│  ├─ 03-decisiones.md              # registro de decisiones técnicas
+│  └─ IMPLEMENTACION_BACKEND.md     # alcance real y activación pendiente
 ├─ DOCUMENTACION.md                 # este documento
 ├─ public/
 │  ├─ favicon.svg
+│  ├─ _redirects                    # fallback SPA en Cloudflare
 │  └─ images/products/placeholder.svg
+├─ scripts/
+│  ├─ export-supabase-seed.mjs
+│  └─ verify-database.mjs           # migraciones y 33 comprobaciones SQL/RLS
 ├─ src/
-│  ├─ app/
-│  │  ├─ layouts/StoreLayout.tsx
-│  │  └─ router.tsx
-│  ├─ components/
-│  │  ├─ layout/                    # SiteHeader, SiteFooter
-│  │  └─ ui/                        # GarmentArt, ProductCard, WhatsAppActions, button
+│  ├─ app/                          # router, layout y providers
+│  ├─ components/                   # layout y UI reutilizable
 │  ├─ data/
 │  │  ├─ seed/                      # categorías, productos, variantes
-│  │  └─ repositories/              # localStorage tipado y recuperación
-│  ├─ domain/
-│  │  ├─ types.ts
-│  │  ├─ money.ts
-│  │  ├─ product.ts
-│  │  ├─ catalog.ts
-│  │  └─ __tests__/
+│  │  └─ repositories/              # localStorage, gateway y admin remoto
+│  ├─ domain/                       # tipos, dinero, stock, pedidos e inventario
 │  ├─ features/
 │  │  ├─ home/
 │  │  ├─ catalog/
 │  │  ├─ product/
 │  │  ├─ not-found/
-│  │  ├─ cart/                      # resumen y edición del carrito
-│  │  ├─ checkout/                  # validación y creación del pedido
-│  │  ├─ order-tracking/            # consulta local por código
-│  │  └─ admin/                     # productos, variantes y pedidos
-│  ├─ hooks/useDocumentTitle.ts
-│  ├─ lib/                          # colors.ts, paths.ts, whatsapp.ts
+│  │  ├─ cart/
+│  │  ├─ checkout/                  # modo local, remoto y compra directa
+│  │  ├─ order-tracking/            # consulta local o con enlace privado
+│  │  └─ admin/remote/              # panel autenticado
+│  ├─ hooks/
+│  ├─ lib/                          # Supabase, WhatsApp, rutas y colores
 │  ├─ styles/index.css
 │  ├─ main.tsx
 │  └─ vite-env.d.ts
+├─ supabase/
+│  ├─ functions/                    # 16 Edge Functions
+│  ├─ migrations/                   # 11 migraciones
+│  ├─ config.toml
+│  └─ seed.sql
 ├─ eslint.config.js
 ├─ index.html
 ├─ package.json
@@ -165,43 +175,38 @@ norte-moda/
 └─ vite.config.ts
 ```
 
-Métricas actuales de código:
-
-- 21 ADR documentados.
-
 ### 5.2 Capas y reglas
 
-| Capa                 | Responsabilidad                                      | Regla                             |
-| -------------------- | ---------------------------------------------------- | --------------------------------- |
-| `domain/`            | Tipos, dinero, stock, filtros y transiciones         | No importa React ni Supabase      |
-| `data/seed/`         | Catálogo ficticio y expansión de variantes           | Datos puros, sin lógica de UI     |
-| `data/repositories/` | Adaptadores tipados sobre `localStorage`             | Validar datos al leer y escribir  |
-| `features/`          | Capacidades de negocio (catálogo, ficha, carrito...) | Componentes y páginas por dominio |
-| `components/ui/`     | Presentación reutilizable                            | Sin reglas de negocio             |
-| `lib/`               | Utilidades sin estado                                | WhatsApp, colores, rutas base     |
-| `app/`               | Router, layout y composición                         | Punto de entrada de las páginas   |
+| Capa                 | Responsabilidad                                      | Regla                                             |
+| -------------------- | ---------------------------------------------------- | ------------------------------------------------- |
+| `domain/`            | Tipos, dinero, stock, filtros y transiciones         | No importa React ni Supabase                      |
+| `data/seed/`         | Catálogo ficticio y expansión de variantes           | Datos puros, sin lógica de UI                     |
+| `data/repositories/` | Repositorios locales y gateway remoto preparado      | Validar datos; no activar remoto sin configurarlo |
+| `features/`          | Capacidades de negocio (catálogo, ficha, carrito...) | Componentes y páginas por dominio                 |
+| `components/ui/`     | Presentación reutilizable                            | Sin reglas de negocio                             |
+| `lib/`               | Utilidades sin estado                                | WhatsApp, colores, rutas base                     |
+| `app/`               | Router, layout y composición                         | Punto de entrada de las páginas                   |
 
 Reglas transversales:
 
 - Dinero siempre en centavos enteros; formatear solo al mostrar.
 - El carrito guarda `variantId` y cantidad, no precios; el pedido congela los datos del catálogo.
-- Pago y entrega son dos ejes independientes, no un único estado.
+- Pedido, pago y entrega tienen estados independientes; preparar exige pago aprobado y stock.
 - La lógica nueva de dominio se prueba antes de conectarla a la UI.
 - Sin `any` explícito y sin `@ts-ignore` sin justificar.
 
 ### 5.3 Rutas
 
-| Ruta                     | Contenido                                         | Estado       |
-| ------------------------ | ------------------------------------------------- | ------------ |
-| `/`                      | Portada editorial con selección, relato y proceso | Implementada |
-| `/catalogo`              | Catálogo con filtros, búsqueda y orden            | Implementada |
-| `/producto/:slug`        | Ficha de producto y variantes                     | Implementada |
-| `/carrito`               | Cantidades, subtotal y disponibilidad             | Implementada |
-| `/checkout`              | Compra invitada y creación local                  | Implementada |
-| `/pedido?codigo=NM-0001` | Consulta e historial del pedido                   | Implementada |
-| `/admin/productos`       | Productos, variantes, SKU y stock                 | Implementada |
-| `/admin/pedidos`         | Búsqueda, detalle y transiciones                  | Implementada |
-| `*`                      | Página 404 dentro del layout                      | Implementada |
+| Ruta                     | Contenido                                         | Estado                       |
+| ------------------------ | ------------------------------------------------- | ---------------------------- |
+| `/`                      | Portada editorial con selección, relato y proceso | Implementada                 |
+| `/catalogo`              | Catálogo con filtros, búsqueda y orden            | Implementada                 |
+| `/producto/:slug`        | Ficha de producto y variantes                     | Implementada                 |
+| `/carrito`               | Cantidades, subtotal y disponibilidad             | Implementada                 |
+| `/checkout`              | Compra invitada: modo local o remoto              | Implementada                 |
+| `/pedido?codigo=NM-0001` | Consulta local o remota con enlace privado        | Implementada                 |
+| `/admin`                 | Acceso autenticado a la administración remota     | Requiere configurar Supabase |
+| `*`                      | Página 404 dentro del layout                      | Implementada                 |
 
 Parámetros del catálogo: `categoria` (slug), `q` (texto) y `orden` (`novedades`, `precio-asc`,
 `precio-desc`).
@@ -218,7 +223,7 @@ Las páginas se cargan bajo demanda al entrar en cada ruta para reducir el JavaS
 | `Catalog`          | `categories`, `products`, `variants`                                                            |
 | `CartLine`         | `variantId`, `quantity`                                                                         |
 | `Customer`         | nombre, teléfono, email nulo (no se solicita en checkout)                                       |
-| `Order`            | código, cliente, entrega, pago, líneas, totales, dos estados, notas e historial                 |
+| `Order`            | código, cliente, entrega, pago, líneas, totales, tres estados, cotización e historial           |
 | `OrderItem`        | datos congelados: nombre, talla, color, precio unitario y cantidad                              |
 | `OrderStatusEvent` | unión discriminada por `axis` (`payment` o `fulfillment`)                                       |
 
@@ -230,7 +235,8 @@ Estados:
 ### 5.5 Flujo de datos actual
 
 ```text
-seed + localStorage validado ←→ repositorios de catálogo, carrito y pedidos
+Modo demo: seed + localStorage validado ←→ repositorios locales
+Modo remoto: Supabase Edge Functions ←→ PostgreSQL + RLS + Storage
         │                                   │
         ▼                                   ▼
 domain/ (stock, importes, estados) ←→ providers de aplicación
@@ -238,12 +244,13 @@ domain/ (stock, importes, estados) ←→ providers de aplicación
         └────── features (tienda, checkout, tracking, admin)
                             │
                             ▼
-React Router + Tailwind → build estático → GitHub Pages
+React Router + Tailwind → build estático → Pages / Cloudflare
 ```
 
-No hay backend compartido: el seed abastece el primer catálogo y `localStorage` conserva los cambios
-de este navegador. Los precios se resuelven contra el catálogo actual al crear el pedido; el pedido
-guarda después una copia histórica de sus líneas y totales.
+Sin variables Supabase, el seed abastece el catálogo y `localStorage` conserva los cambios de este
+navegador. Con variables públicas configuradas, el checkout consulta y crea el pedido en el servidor;
+los precios, el stock y los totales se validan allí y el pedido guarda una copia histórica. La base de
+datos no está conectada en esta entrega y el flujo remoto aún requiere una prueba en la nube.
 
 ---
 
@@ -284,29 +291,25 @@ guarda después una copia histórica de sus líneas y totales.
 
 ### 6.4 WhatsApp
 
-Módulo puro en `src/lib/whatsapp.ts`:
+La tienda conserva el enlace profundo `wa.me` y el fallback de copiar mensaje. Además, el backend
+incluye un webhook de WhatsApp Cloud API preparado:
 
-Funciones en `src/lib/whatsapp.ts`: mensajes de pedido y producto, validación del número y enlace
-`wa.me` con el texto codificado.
+- Verificación del reto de Meta y de la firma `X-Hub-Signature-256`.
+- Deduplicación de eventos, reintentos y registro de estados de entrega.
+- Contexto conversacional efímero; no se guarda el contenido completo del chat.
+- Consultas de catálogo, stock, pago, pedido y entrega con datos vigentes del servidor.
+- Derivación a una persona cuando falta información o el cliente lo pide.
+- Cola de salida bloqueada por `WHATSAPP_SEND_ENABLED=false` hasta autorización expresa.
+- Referencias de pago registradas por el comprador quedan pendientes de revisión; nunca se aprueban
+  automáticamente.
 
-Características:
+`VITE_STORE_WHATSAPP_NUMBER` es opcional y queda vacío por defecto. Sin número configurado, la
+interfaz solo permite copiar el mensaje; no hay un destinatario ficticio. El pedido incluye código,
+cliente, líneas con nombre/talla/color/cantidad/total, pago, entrega, agencia si aplica, total y nota
+opcional. `encodeURIComponent` escapa acentos, saltos de línea, `#` y símbolos.
 
-- `VITE_STORE_WHATSAPP_NUMBER` es opcional y queda vacío por defecto. No hay un teléfono ajeno ni
-  ficticio hardcodeado.
-- Mensajes con negritas (`*texto*`), listas y saltos de línea.
-- `encodeURIComponent` para escapar acentos, saltos de línea, `#` y símbolos.
-- Validación de pedidos sin código o sin prendas, y de números demasiado cortos.
-- La consulta incluye prenda, talla, color y precio.
-- El pedido incluye código, cliente, líneas con nombre/talla/color/cantidad/total, pago, entrega,
-  agencia si aplica, total y nota opcional.
-
-Interfaz `WhatsAppActions`:
-
-- Si se configura explícitamente el teléfono de la tienda, abre el enlace con el mensaje listo.
-- Sin configuración, solo muestra “Copiar mensaje” y avisa que está en modo demo.
-- Si el navegador bloquea el portapapeles, muestra el mensaje completo en un campo de solo lectura
-  para copiarlo a mano.
-- La consulta del pedido ofrece un resumen copiable; no envía mensajes automáticamente.
+No se ha probado con Meta ni se han enviado mensajes reales. La mensajería saliente y las plantillas
+facturables siguen desactivadas.
 
 ### 6.5 Navegación y 404
 
@@ -330,37 +333,48 @@ Interfaz `WhatsAppActions`:
 - Solicita dirección según la forma de entrega; no pide cédula, correo ni referencia bancaria.
 - Recalcula las líneas contra el catálogo vigente y calcula subtotal, tarifa ficticia y total en
   centavos.
+- Con Supabase configurado, solicita una cotización autoritativa y crea el pedido con idempotencia.
+  Si el total cambió, exige confirmación del comprador. Nunca recurre a `localStorage` como sustituto.
+- La compra directa desde una ficha usa una intención temporal y no borra el carrito existente.
 - Genera el código `NM-####`, congela producto, variante y precio, e inicia pago y entrega por separado.
 - Solo limpia el carrito y navega a confirmación si el pedido se guardó correctamente.
 - Explica que no procesa pagos ni crea envíos.
 
 ### 6.8 Consulta del pedido (`/pedido?codigo=NM-0001`)
 
-- Busca por código normalizado en los pedidos locales del navegador actual.
+- En modo local, busca por código normalizado en los pedidos de este navegador.
+- En modo remoto, exige el enlace privado con token; el token viaja en el fragmento `#` y la base
+  guarda solo su hash.
 - Presenta artículos y totales congelados, pago previsto, pago actual y preparación/entrega.
+- Permite registrar la referencia de pago, que deja el pago en revisión manual.
+- Ofrece “Actualizar estado” en modo remoto para reflejar cambios del panel.
 - Muestra el historial por eje y deja copiar un resumen sin enviar datos a WhatsApp.
-- Explica los códigos inexistentes y que los pedidos no se comparten entre navegadores.
+- Explica los códigos inexistentes y que los pedidos locales no se comparten entre navegadores.
 
 ### 6.9 Panel de administración (`/admin`)
 
+- Requiere Supabase Auth y una membresía activa; la autorización se valida en el servidor.
 - Crea y edita productos; activa o pausa su aparición en la tienda.
 - Crea, edita y elimina variantes con talla, color, SKU único y stock entero no negativo.
-- Busca y filtra pedidos; consulta sus líneas, totales, comprador y coordinación.
-- Cambia pago y entrega en controles separados, solo mediante transiciones de dominio válidas.
-- «Por verificar» registra recepción pendiente; «Pagado» requiere una acción posterior de revisión
-  manual. No hay consulta bancaria ni señal del comprador que confirme un pago.
-- Cada transición se agrega al historial. La entrega avanza en orden de preparación, despacho y
-  entrega.
-- Incluye restauración confirmada de los datos ficticios.
-- Avisa que los datos son locales y que el panel no tiene autenticación ni protección de producción.
+- Busca y filtra pedidos; consulta sus líneas, totales, comprador, referencia de pago y coordinación.
+- Cambia pago y entrega en controles separados, solo mediante transiciones válidas.
+- La referencia del comprador solo deja el pago «por verificar»; «Pagado» exige una acción posterior
+  de una persona autorizada. No hay conciliación bancaria ni aprobación automática.
+- Cada transición se agrega al historial. La entrega avanza en preparación, despacho y entrega.
+- Importa existencias por CSV con transacción, control de cambios obsoletos y movimientos auditables.
+- Administra imágenes, métricas, métodos manuales y derivaciones de WhatsApp.
+- El panel local sin autenticación fue retirado. Sin Supabase, `/admin` solo muestra la configuración
+  pendiente.
 
 ### 6.10 Persistencia local
 
 - Repositorios separados para catálogo, carrito y pedidos; los componentes no llaman directamente a
-  `localStorage`.
-- Zod valida datos persistidos, totales congelados, referencias del catálogo, ids y códigos.
+  `localStorage` ni a las funciones Edge.
+- Zod valida datos persistidos y respuestas remotas: totales congelados, referencias, ids y códigos.
 - Datos dañados se descartan o restauran desde el seed; el carrito se recorta al stock disponible.
-- El estado sobrevive a recargas en el mismo navegador, pero no se comparte entre dispositivos.
+- El estado local sobrevive a recargas en el mismo navegador, pero no se comparte entre dispositivos.
+- Con Supabase, la fuente de verdad es PostgreSQL; el token privado y la referencia de pago se tratan
+  como datos sensibles.
 
 ---
 
@@ -428,33 +442,31 @@ ninguna marca** y el proyecto no está afiliado a ninguna tienda.
 
 ### Verificaciones de esta entrega
 
-| Comando             | Resultado                                              |
-| ------------------- | ------------------------------------------------------ |
-| `pnpm test`         | Correcto: 115 pruebas en 12 archivos                   |
-| `pnpm typecheck`    | Correcto                                               |
-| `pnpm lint`         | Correcto, sin advertencias                             |
-| `pnpm format:check` | Correcto                                               |
-| `pnpm build`        | Correcto; entrada principal 447,11 kB (138,43 kB gzip) |
-| `pnpm check`        | Correcto: tipos, lint y 115 pruebas                    |
+| Comando             | Resultado                                          |
+| ------------------- | -------------------------------------------------- |
+| `pnpm check`        | Correcto: tipos, lint y 195 pruebas en 22 archivos |
+| `pnpm test:db`      | Correcto: 33 comprobaciones SQL/RLS con PGlite     |
+| `pnpm format:check` | Correcto                                           |
+| `pnpm build`        | Correcto; genera `dist/`                           |
 
-El build divide las pantallas por ruta y ya no genera un paquete de entrada por encima de 500 kB.
-Rollup muestra avisos no bloqueantes al retirar anotaciones de comentarios de Zod 4.
-En `vite preview`, las 29 rutas verificadas (inicio, rutas principales y 21 productos) respondieron
-HTTP 200.
+`scripts/verify-database.mjs` crea los esquemas que Supabase proporciona, aplica las 11 migraciones
+en orden, carga el seed y comprueba catálogo, cotización, idempotencia, manipulación de totales,
+consulta privada, token incorrecto, referencia de pago, aprobación manual, descuento único de stock,
+transiciones, RLS y permisos de `anon`, `authenticated` y `service_role`. PGlite valida SQL real,
+pero no reemplaza una prueba contra Supabase Cloud, PostgREST ni el runtime de Edge Functions.
 
 ### Distribución
 
-| Área de pruebas                                    | Cobertura                                                     |
-| -------------------------------------------------- | ------------------------------------------------------------- |
-| `domain/__tests__/`                                | Dinero, catálogo, carrito, producto, pedidos y transiciones   |
-| `data/repositories.test.ts`                        | Persistencia, validación y recuperación de datos dañados      |
-| `features/home/__tests__/home-page.test.tsx`       | Render de portada y 404                                       |
-| `features/catalog/__tests__/catalog-page.test.tsx` | Filtros, URL, búsqueda, orden y vacío                         |
-| `features/product/__tests__/product-page.test.tsx` | Variantes, agotado e interacción segura de WhatsApp           |
-| `features/checkout/checkout-flow.test.tsx`         | Añadir, modificar, checkout, guardar, consultar y administrar |
+| Área de pruebas                      | Cobertura                                                        |
+| ------------------------------------ | ---------------------------------------------------------------- |
+| `domain/__tests__/`                  | Dinero, catálogo, carrito, producto, pedidos, inventario y pagos |
+| `data/`                              | Repositorios, CSV, gateway remoto y respuestas inválidas         |
+| `features/` (home, catalog, product) | Render, filtros, URL, variantes, agotado y WhatsApp              |
+| `features/checkout/`                 | Flujo local, compra directa y creación de pedido                 |
+| `lib/__tests__/`                     | WhatsApp, webhook, cola, asistente, IA y firma                   |
 
-Las pruebas de humo usan `renderToStaticMarkup`; el recorrido comprador/administrador usa
-Testing Library y jsdom. No se configuró Playwright ni una suite E2E en navegador real.
+Las pruebas de humo usan `renderToStaticMarkup`; los recorridos usan Testing Library y jsdom. No se
+configuró Playwright ni una suite E2E en navegador real.
 
 ### Verificaciones manuales registradas en una etapa anterior
 
@@ -493,18 +505,24 @@ consulta de pedido y panel a 390 px y 1440 px, y guardar capturas sin datos pers
   1. Instala pnpm y Node.
   2. `pnpm install --frozen-lockfile`.
   3. `pnpm check` (tipos, lint y pruebas).
-  4. `pnpm build` con `VITE_BASE_PATH=/ProyectOne/`.
-  5. Genera `dist/404.html`.
-  6. Publica el artefacto en Pages.
+  4. `pnpm test:db` (migraciones y comprobaciones SQL/RLS).
+  5. `pnpm format:check`.
+  6. `pnpm build` con `VITE_BASE_PATH=/ProyectOne/` y variables públicas opcionales.
+  7. Genera `dist/404.html` y publica el artefacto en Pages.
 - El build copia `index.html` a `/catalogo`, `/carrito`, `/checkout`, `/pedido`, las rutas estáticas
   del panel y cada `/producto/:slug`, de modo que esas rutas respondan **200**.
 - Las rutas desconocidas reciben `404.html`, que renderiza la app con la página 404. Es una
   limitación de GitHub Pages: no hay reescritura de rutas.
 - `VITE_BASE_PATH` mantiene la base `/` en local y `/ProyectOne/` en Pages.
 
-Esta copia de trabajo no contiene metadatos `.git`; por eso no se pudo comprobar su rama, comparar
-cambios locales con el remoto ni publicar esta versión. La URL anterior puede seguir mostrando una
-versión previa. No hay credenciales ni secretos de producción en el código.
+El repositorio local se reconstruyó desde `origin/main` conservando los cambios de trabajo. Un push
+autorizado a `main` inicia la verificación y la publicación. GitHub Pages sirve solo la demo; para una
+tienda operativa hay que usar un hosting permitido y conectar Supabase. El workflow manual
+`.github/workflows/deploy-cloudflare.yml` queda preparado para Cloudflare Pages, pero no se ejecutó
+porque no hay cuenta, token ni `accountId`.
+
+No hay credenciales ni secretos de producción en el código. `.env.local` y cualquier `.env` están
+excluidos por `.gitignore`; `.env.example` solo contiene nombres y valores vacíos.
 
 ---
 
@@ -601,6 +619,19 @@ versión previa. No hay credenciales ni secretos de producción en el código.
   así que los cambios se compararon contra el árbol remoto y se publicaron en una actualización
   atómica.
 
+### Integración remota y endurecimiento — 2026-10-22
+
+- Gateway Supabase para cotización, creación, consulta y referencia de pago.
+- Migración `20261021180000_public_payment_references.sql` y Edge Function
+  `submit-payment-reference`: el comprador registra una referencia y el pago queda en revisión.
+- UI de seguimiento con enlace privado, referencia, mensajes demo/remoto y actualización de estado.
+- Compra directa aislada que conserva el carrito original.
+- Webhook de WhatsApp con firma, deduplicación, cola, estados, conversaciones y fallback.
+- 11 migraciones y 16 Edge Functions; validación con PGlite mediante `pnpm test:db` (33 comprobaciones).
+- 195 pruebas de aplicación en 22 archivos; `pnpm build` y `pnpm format:check` correctos.
+- Workflow de Cloudflare Pages preparado; no ejecutado por falta de credenciales.
+- El backend no se aplicó a Supabase Cloud y WhatsApp no se probó con Meta.
+
 ---
 
 ## 12. Registro de decisiones (ADR)
@@ -653,16 +684,17 @@ El detalle completo está en `docs/03-decisiones.md`. Resumen:
 
 ## 14. Limitaciones conocidas
 
-1. **Almacenamiento local:** los datos quedan en `localStorage` de este navegador. No son pedidos
-   compartidos y se pierden al limpiar los datos del sitio.
-2. **Sin autoridad de servidor:** catálogo, stock, importes y estados solo se validan en el cliente.
-   No hay transacciones ni reserva de stock entre pedidos o dispositivos.
-3. **Panel sin autenticación:** cualquier persona que abra la ruta puede editar los datos locales.
-   No debe recibir datos reales ni usarse para administrar un comercio.
-4. **Pagos y entregas manuales:** no hay consulta bancaria, captura de comprobantes ni conexión con
-   MRW, ZOOM o servicios de delivery. «Pagado» es un registro manual de la demo.
-5. **WhatsApp opcional:** el número de `VITE_STORE_WHATSAPP_NUMBER` está vacío por defecto; se
-   necesita configurar explícitamente el teléfono propio para abrir un enlace.
+1. **Backend no conectado:** no hay proyecto Supabase enlazado ni funciones desplegadas. El modo
+   remoto está implementado y probado con PostgreSQL embebido, pero no en la nube.
+2. **Almacenamiento local:** en modo demo, los datos quedan en `localStorage` de este navegador. No
+   son pedidos compartidos y se pierden al limpiar los datos del sitio.
+3. **WhatsApp sin credenciales:** el webhook y la cola están preparados, pero no se probaron con
+   Meta. `WHATSAPP_SEND_ENABLED=false` impide envíos salientes y no se enviaron mensajes reales.
+4. **Pagos y entregas manuales:** no hay conciliación bancaria, captura de comprobantes en imagen,
+   pasarela ni conexión con MRW, ZOOM o servicios de delivery. «Pagado» siempre requiere revisión
+   humana.
+5. **Supabase local incompleto:** Docker Desktop falló con errores de E/S y poco espacio; no se
+   ejecutó el stack completo. PGlite valida migraciones y RLS, no PostgREST ni Edge Runtime.
 6. **Rutas dinámicas en Pages:** las rutas conocidas se copian como archivos estáticos. Rutas
    desconocidas cargan el fallback `404.html` con estado HTTP 404.
 7. **Visuales:** las siluetas SVG son ilustraciones temporales; aún no hay fotografía de producto.
@@ -676,10 +708,18 @@ El detalle completo está en `docs/03-decisiones.md`. Resumen:
 
 ## 15. Próximos pasos
 
-La siguiente fase es convertir la demo local en un sistema compartido. Requiere configurar Supabase
-u otro backend, autenticación y autorización de servidor, transacciones de inventario, recuperación
-de cuenta, privacidad/retención de datos y pruebas E2E. Los pagos, mensajería y envíos deben
-integrarse solo con credenciales y proveedores autorizados.
+La siguiente fase es activar y validar la infraestructura que ya existe en código:
+
+1. Crear un proyecto Supabase Free, enlazarlo y aplicar las 11 migraciones y, si se desea, el seed.
+2. Desplegar las 16 Edge Functions, configurar secretos y registrar el usuario administrador.
+3. Probar en staging el checkout, el enlace privado, la referencia de pago, RLS, el descuento de
+   stock y el panel. Verificar PostgREST y Edge Runtime, no solo PGlite.
+4. Elegir un hosting permitido para una tienda y publicar allí. Pages queda solo como demo.
+5. Configurar WhatsApp con un número de prueba, validar firma, deduplicación y cola sin enviar
+   mensajes reales; habilitar envíos solo con autorización expresa.
+6. Definir métodos de pago, políticas de privacidad/retención y logística real.
+
+Pagos, mensajería y envíos deben integrarse solo con credenciales y proveedores autorizados.
 
 ---
 
@@ -700,7 +740,8 @@ pnpm dev          # http://localhost:5173
 ### Verificación
 
 ```bash
-pnpm test         # 115 pruebas en la verificación de esta entrega
+pnpm test         # 195 pruebas en 22 archivos (verificación actual)
+pnpm test:db      # 33 comprobaciones SQL/RLS con PGlite
 pnpm typecheck    # tsc --noEmit
 pnpm lint         # ESLint sin advertencias
 pnpm format:check # Prettier
@@ -714,11 +755,11 @@ pnpm check        # tipos + lint + pruebas
 git push origin main
 ```
 
-Al ejecutar esta secuencia en un clon Git válido, un push a `main` inicia el workflow y publica en
-GitHub Pages si pasan las verificaciones. Esta copia de trabajo no contiene metadatos `.git`, así
-que no permite consultar una rama local. El contenido de esta entrega se publicó en `main`; GitHub
-Actions verificó tipos, lint, pruebas y build, y Pages completó la publicación. Consulta la tabla
-de verificaciones para los resultados de esta entrega.
+Un push autorizado a `main` inicia el workflow y publica en GitHub Pages si pasan las
+verificaciones. El repositorio local está reconstruido desde `origin/main`; no se hizo push ni se
+ejecutó un despliegue nuevo durante esta revisión. La URL publicada puede mostrar la versión anterior
+hasta que se autorice el push. El backend Supabase y las funciones Edge no se despliegan desde este
+workflow.
 
 ---
 

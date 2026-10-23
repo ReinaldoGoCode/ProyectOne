@@ -1,6 +1,21 @@
 import { createContext, useContext } from 'react'
 
-import type { Catalog, CategoryId, Product, ProductId, Size } from '@/domain/types'
+import type {
+  Catalog,
+  CategoryId,
+  InventoryMovement,
+  Order,
+  Product,
+  ProductId,
+  Size,
+} from '@/domain/types'
+
+export interface InventoryImportSummary {
+  readonly createdProducts: number
+  readonly createdVariants: number
+  readonly changedVariants: number
+  readonly movements: number
+}
 
 export interface ProductInput {
   readonly name: string
@@ -23,12 +38,18 @@ export interface VariantInput {
 
 export interface CatalogContextValue {
   readonly catalog: Catalog
+  readonly catalogMode: 'demo' | 'loading' | 'connected' | 'error'
+  readonly refreshCatalog: () => Promise<void>
+  readonly inventoryMovements: readonly InventoryMovement[]
   readonly createProduct: (input: ProductInput) => Product
   readonly updateProduct: (id: ProductId, input: ProductInput) => void
   readonly setProductActive: (id: ProductId, active: boolean) => void
   readonly saveVariant: (input: VariantInput) => void
   readonly deleteVariant: (id: string) => void
+  readonly applyInventoryCsv: (csvText: string) => InventoryImportSummary
   readonly resetCatalog: () => void
+  /** Demo-only stock check and deduction performed after manual payment approval. */
+  readonly consumeStockForOrder: (order: Order) => boolean
 }
 
 export const CatalogContext = createContext<CatalogContextValue | null>(null)

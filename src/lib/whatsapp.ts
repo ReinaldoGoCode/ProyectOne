@@ -18,6 +18,8 @@ const PAYMENT_LABELS: Readonly<Record<PaymentMethod, string>> = {
   pago_movil: 'Pago Móvil',
   transferencia: 'Transferencia bancaria',
   efectivo: 'Efectivo',
+  efectivo_ves: 'Efectivo en bolívares',
+  efectivo_usd: 'Efectivo en dólares',
 }
 
 const DELIVERY_LABELS: Readonly<Record<DeliveryMethod, string>> = {

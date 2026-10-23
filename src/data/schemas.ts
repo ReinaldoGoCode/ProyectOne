@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-import type { Catalog, Order } from '@/domain/types'
+import type { Catalog, InventoryMovement, Order } from '@/domain/types'
 
 const SIZE_VALUES = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'Único'] as const
 const PAYMENT_STATUS_VALUES = [
@@ -17,7 +17,19 @@ const FULFILLMENT_STATUS_VALUES = [
   'entregado',
   'cancelado',
 ] as const
-const PAYMENT_METHOD_VALUES = ['pago_movil', 'transferencia', 'efectivo'] as const
+const ORDER_STATUS_VALUES = [
+  'awaiting_payment',
+  'confirmed',
+  'inventory_exception',
+  'cancelled',
+] as const
+const PAYMENT_METHOD_VALUES = [
+  'pago_movil',
+  'transferencia',
+  'efectivo',
+  'efectivo_ves',
+  'efectivo_usd',
+] as const
 const DELIVERY_METHOD_VALUES = ['delivery_local', 'envio_nacional', 'retiro'] as const
 
 const categorySchema = z.object({
@@ -49,6 +61,20 @@ const variantSchema = z.object({
   color: z.string().min(1),
   sku: z.string().min(1),
   stock: z.number().int().nonnegative(),
+})
+
+const inventoryMovementSchema = z.object({
+  id: z.string().min(1),
+  variantId: z.string().nullable(),
+  sku: z.string(),
+  productName: z.string(),
+  size: z.enum(SIZE_VALUES),
+  color: z.string(),
+  delta: z.number().int(),
+  reason: z.enum(['receipt', 'sale', 'adjustment', 'import']),
+  note: z.string().nullable(),
+  orderId: z.string().nullable(),
+  createdAt: z.iso.datetime(),
 })
 
 export const catalogSchema = z
@@ -142,10 +168,27 @@ const fulfillmentEventSchema = z.object({
   note: z.string().nullable(),
 })
 
+const orderEventSchema = z.object({
+  axis: z.literal('order'),
+  id: z.string().min(1),
+  at: z.string().min(1),
+  from: z.enum(ORDER_STATUS_VALUES).nullable(),
+  to: z.enum(ORDER_STATUS_VALUES),
+  note: z.string().nullable(),
+})
+
 const orderStatusEventSchema = z.discriminatedUnion('axis', [
   paymentEventSchema,
   fulfillmentEventSchema,
+  orderEventSchema,
 ])
+
+const exchangeQuoteSchema = z.object({
+  vesPerUsd: z.string().regex(/^(?:0|[1-9]\d*)(?:\.\d{1,6})?$/),
+  source: z.enum(['demo_ficticia', 'bcv']),
+  quotedAt: z.iso.datetime(),
+  expiresAt: z.iso.datetime(),
+})
 
 export const orderSchema = z
   .object({
@@ -157,12 +200,15 @@ export const orderSchema = z
     shippingAddress: shippingAddressSchema.nullable(),
     shippingAgency: z.string().nullable(),
     paymentMethod: z.enum(PAYMENT_METHOD_VALUES),
+    paymentInstructions: z.string().nullable().optional(),
     paymentReference: z.string().nullable(),
     customerNote: z.string().nullable(),
     items: z.array(orderItemSchema).min(1),
     subtotalCents: z.number().int().nonnegative(),
     shippingCents: z.number().int().nonnegative(),
     totalCents: z.number().int().nonnegative(),
+    exchangeQuote: exchangeQuoteSchema.optional(),
+    orderStatus: z.enum(ORDER_STATUS_VALUES),
     paymentStatus: z.enum(PAYMENT_STATUS_VALUES),
     fulfillmentStatus: z.enum(FULFILLMENT_STATUS_VALUES),
     notes: z.array(orderNoteSchema),
@@ -186,6 +232,7 @@ export const orderSchema = z
     }
     const paymentEvents = order.history.filter((event) => event.axis === 'payment')
     const fulfillmentEvents = order.history.filter((event) => event.axis === 'fulfillment')
+    const orderEvents = order.history.filter((event) => event.axis === 'order')
     if (paymentEvents.at(-1)?.to !== order.paymentStatus) {
       context.addIssue({
         code: 'custom',
@@ -198,6 +245,13 @@ export const orderSchema = z
         code: 'custom',
         path: ['fulfillmentStatus'],
         message: 'El estado de entrega no coincide con el historial.',
+      })
+    }
+    if (orderEvents.at(-1)?.to !== order.orderStatus) {
+      context.addIssue({
+        code: 'custom',
+        path: ['orderStatus'],
+        message: 'El estado general no coincide con el historial.',
       })
     }
   })
@@ -220,7 +274,45 @@ export function parseCatalog(value: unknown): Catalog | null {
   return result.success ? result.data : null
 }
 
+export function parseInventoryMovements(value: unknown): readonly InventoryMovement[] | null {
+  const result = z.array(inventoryMovementSchema).safeParse(value)
+  return result.success ? result.data : null
+}
+
 export function parseOrders(value: unknown): readonly Order[] | null {
-  const result = ordersSchema.safeParse(value)
+  const entries: readonly unknown[] | null = Array.isArray(value) ? (value as unknown[]) : null
+  const migrated: unknown = entries
+    ? entries.map((entry, index) => {
+        if (typeof entry !== 'object' || entry === null || Array.isArray(entry)) return entry
+        const order = entry as Record<string, unknown>
+        if (typeof order['orderStatus'] === 'string') return entry
+        const status =
+          order['paymentStatus'] === 'pagado'
+            ? 'confirmed'
+            : order['paymentStatus'] === 'cancelado'
+              ? 'cancelled'
+              : 'awaiting_payment'
+        const createdAt =
+          typeof order['createdAt'] === 'string' ? order['createdAt'] : '1970-01-01T00:00:00.000Z'
+        const rawHistory = order['history']
+        const history: unknown[] = Array.isArray(rawHistory) ? (rawHistory as unknown[]) : []
+        return {
+          ...order,
+          orderStatus: status,
+          history: [
+            ...history,
+            {
+              axis: 'order',
+              id: `legacy-order-status-${String(index)}`,
+              at: createdAt,
+              from: null,
+              to: status,
+              note: 'Pedido local migrado al nuevo modelo de estados.',
+            },
+          ],
+        }
+      })
+    : value
+  const result = ordersSchema.safeParse(migrated)
   return result.success ? result.data : null
 }

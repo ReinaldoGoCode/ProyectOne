@@ -1,0 +1,67 @@
+name: Desplegar en Cloudflare Pages
+
+# Hosting alternativo para una tienda operativa. GitHub Pages solo debe usarse
+# para la demo de portafolio; Cloudflare Pages permite un sitio comercial con
+# su propio dominio y no aloja el backend (Supabase sigue siendo el backend).
+#
+# Requisitos antes de ejecutarlo:
+# - Crear un proyecto de Cloudflare Pages llamado `norte-moda`.
+# - Guardar `CLOUDFLARE_API_TOKEN` y `CLOUDFLARE_ACCOUNT_ID` como secretos del
+#   repositorio.
+# - Configurar las variables públicas del build en el entorno de Pages o en
+#   `vars` del repositorio.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  deployments: write
+
+jobs:
+  publicar:
+    name: Verificar y publicar
+    runs-on: ubuntu-latest
+    environment:
+      name: cloudflare-pages
+      url: ${{ steps.deploy.outputs.deployment-url }}
+    steps:
+      - name: Descargar el repositorio
+        uses: actions/checkout@v4
+
+      - name: Instalar pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.28.5
+
+      - name: Instalar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Instalar dependencias
+        run: pnpm install --frozen-lockfile
+
+      - name: Verificar tipos, lint y pruebas
+        run: pnpm check
+
+      - name: Verificar migraciones y RLS
+        run: pnpm test:db
+
+      - name: Verificar formato
+        run: pnpm format:check
+
+      - name: Construir el sitio para la raíz del dominio
+        run: pnpm build
+        env:
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
+          VITE_STORE_WHATSAPP_NUMBER: ${{ vars.VITE_STORE_WHATSAPP_NUMBER }}
+
+      - name: Publicar en Cloudflare Pages
+        id: deploy
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy dist --project-name=norte-moda

@@ -29,6 +29,7 @@ describe('ficha de producto', () => {
     expect(html).toContain('$28,00')
     expect(html).toContain('4 unidades disponibles')
     expect(html).toContain('Modo demo: el WhatsApp de la tienda no está configurado.')
+    expect(html).toContain('Comprar por WhatsApp')
     expect(html).toContain('Copiar mensaje')
     expect(html).not.toContain('https://wa.me/')
   })
@@ -38,6 +39,12 @@ describe('ficha de producto', () => {
 
     expect(html).toContain('3 unidades disponibles')
     expect(html).toContain('aria-pressed="true"')
+  })
+
+  it('restaura la cantidad preparada por el contexto de WhatsApp', () => {
+    const html = renderProduct('/producto/camisa-lino-margarita?talla=M&color=Negro&cantidad=2')
+
+    expect(html).toContain('value="2"')
   })
 
   it('deshabilita las combinaciones agotadas del color elegido', () => {

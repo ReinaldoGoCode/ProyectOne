@@ -332,3 +332,43 @@ pedido inventado ni una consulta por código vacía.
 **Consecuencia.** La interfaz no promete nada que no pueda cumplir. Falta un cambio pequeño cuando
 exista el pedido: pasar `buildOrderWhatsAppUrl(order)` a `WhatsAppActions` en la confirmación y el
 seguimiento. Adelantar el carrito y el checkout es el siguiente paso natural.
+
+---
+
+## ADR-022 · Pago, pedido e inventario son estados separados
+
+**Contexto.** La preparación no debe empezar solo porque exista un pedido o porque alguien marcó un comprobante como recibido.
+
+**Decisión.** Mantener estados independientes de pedido, pago y entrega. Solo un administrador autenticado puede aprobar un pago en el backend. En esa transacción se vuelve a comprobar el stock; se descuenta si alcanza y se abre una incidencia si no alcanza. `preparando` exige pago aprobado y pedido confirmado. El checkout no aparta unidades.
+
+**Consecuencia.** La ruta remota puede evitar sobreventa y dejar auditoría atómica. La demo local aplica las mismas reglas, pero `localStorage` no ofrece transacciones entre dispositivos ni autorización real.
+
+---
+
+## ADR-023 · Cotización de prueba marcada como ficticia
+
+**Contexto.** La pantalla requiere mostrar USD y VES antes de contratar o validar un proveedor oficial.
+
+**Decisión.** Mostrar una tasa fija de demostración, `40,00 Bs./USD`, con fuente `demo_ficticia`, fecha y vencimiento. Convertir usando decimales a céntimos; no leerla ni etiquetarla como BCV.
+
+**Consecuencia.** El flujo puede probar formato y congelado de la cotización sin representar valores financieros vigentes. Se debe elegir una fuente oficial y una política de contingencia antes de ventas reales.
+
+---
+
+## ADR-024 · Backend preparado, no conectado ni publicado
+
+**Contexto.** Faltan credenciales de Supabase, una cuenta administradora y configuración de Meta y del banco.
+
+**Decisión.** Dejar migraciones, políticas RLS, funciones Edge y un gateway tipado, con modo demo local cuando falta configuración y modo remoto cuando existe. Validar el SQL con PGlite sin depender de Docker. Nunca incluir claves de servicio en `VITE_*`; no enviar mensajes ni pagos reales en esta fase.
+
+**Consecuencia.** El repositorio contiene una base revisable y probada localmente, pero no debe describirse como una tienda remota ya activa. La versión de GitHub Pages sigue siendo una demostración estática y el backend requiere una prueba en Supabase Cloud.
+
+---
+
+## ADR-025 · Referencia de pago pública sin aprobación automática
+
+**Contexto.** El comprador necesita informar el número de referencia de su pago desde el enlace privado, pero el sistema no puede verificar la llegada del dinero.
+
+**Decisión.** Exponer `submit_public_payment_reference` solo a través de una Edge Function que exige código y token privado. La función guarda referencia y nota, deduplica y mueve el pago a `review`; `lookup_public_order` muestra la referencia. Ninguna ruta pública puede marcarlo como `paid`.
+
+**Consecuencia.** El comprador tiene un paso claro y el administrador conserva la decisión. No se suben imágenes de comprobante; la verificación bancaria y la aprobación siguen siendo humanas.

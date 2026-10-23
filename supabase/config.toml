@@ -1,0 +1,58 @@
+project_id = "norte-moda"
+
+[api]
+enabled = true
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+major_version = 17
+
+[db.seed]
+sql_paths = ["./seed.sql"]
+
+[functions.create-order]
+verify_jwt = false
+
+[functions.lookup-order]
+verify_jwt = false
+
+[functions.demo-quote]
+verify_jwt = false
+
+[functions.checkout-quote]
+verify_jwt = false
+
+[functions.admin-orders]
+verify_jwt = true
+
+[functions.admin-catalog]
+verify_jwt = true
+
+[functions.admin-product-image]
+verify_jwt = true
+
+[functions.admin-payment-settings]
+verify_jwt = true
+
+[functions.store-payment-options]
+verify_jwt = false
+
+[functions.admin-update-order]
+verify_jwt = true
+
+[functions.admin-whatsapp-handoffs]
+verify_jwt = true
+
+[functions.whatsapp-webhook]
+verify_jwt = false
+
+[functions.whatsapp-outbox]
+verify_jwt = false
+
+[functions.create-whatsapp-purchase-context]
+verify_jwt = false
+
+[functions.submit-payment-reference]
+verify_jwt = false

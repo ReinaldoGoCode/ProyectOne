@@ -59,9 +59,6 @@ export function SiteHeader() {
             Carrito{' '}
             <span aria-label={`${String(summary.itemCount)} artículos`}>({summary.itemCount})</span>
           </Link>
-          <Link to="/admin" className={`${NAV_LINK_CLASS} text-stone-600 hover:text-ink`}>
-            Demo admin
-          </Link>
           {SECTION_LINKS.map((link) => (
             <a
               key={link.id}
@@ -133,17 +130,6 @@ export function SiteHeader() {
                 className="block py-3.5 text-sm text-stone-700 transition-colors active:text-ink"
               >
                 Carrito ({summary.itemCount})
-              </Link>
-            </li>
-            <li>
-              <Link
-                to="/admin"
-                onClick={() => {
-                  setMenuOpen(false)
-                }}
-                className="block py-3.5 text-sm text-stone-700 transition-colors active:text-ink"
-              >
-                Panel demo
               </Link>
             </li>
             {SECTION_LINKS.map((link) => (

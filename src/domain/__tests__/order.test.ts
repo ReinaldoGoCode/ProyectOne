@@ -11,6 +11,7 @@ import {
   getAllowedFulfillmentTransitions,
   getAllowedPaymentTransitions,
   nextOrderCode,
+  resolveInventoryException,
   transitionFulfillmentStatus,
   transitionPaymentStatus,
 } from '../order'
@@ -81,9 +82,10 @@ describe('createOrder', () => {
     const order = sampleOrder()
 
     expect(order.paymentStatus).toBe('pendiente')
+    expect(order.orderStatus).toBe('awaiting_payment')
     expect(order.fulfillmentStatus).toBe('nuevo')
-    expect(order.history).toHaveLength(2)
-    expect(order.history.map((event) => event.axis)).toEqual(['payment', 'fulfillment'])
+    expect(order.history).toHaveLength(3)
+    expect(order.history.map((event) => event.axis)).toEqual(['order', 'payment', 'fulfillment'])
     expect(order.notes).toEqual([])
   })
 
@@ -167,7 +169,7 @@ describe('transiciones de estado', () => {
   it('permite las transiciones definidas y bloquea las inválidas', () => {
     expect(canTransitionPayment('pendiente', 'por_verificar')).toBe(true)
     expect(canTransitionPayment('pendiente', 'pagado')).toBe(false)
-    expect(canTransitionFulfillment('nuevo', 'preparando')).toBe(true)
+    expect(canTransitionFulfillment('nuevo', 'preparando')).toBe(false)
     expect(canTransitionFulfillment('entregado', 'nuevo')).toBe(false)
 
     expect(getAllowedPaymentTransitions('por_verificar')).toEqual([
@@ -183,25 +185,46 @@ describe('transiciones de estado', () => {
     const updated = transitionPaymentStatus(order, 'por_verificar', '  Comprobante recibido  ')
 
     expect(updated.paymentStatus).toBe('por_verificar')
-    expect(updated.history).toHaveLength(3)
+    expect(updated.history).toHaveLength(4)
     expect(updated.history[0]).toEqual(order.history[0])
-    expect(updated.history[2]?.note).toBe('Comprobante recibido')
+    expect(updated.history.at(-1)?.note).toBe('Comprobante recibido')
   })
 
   it('rechaza transiciones inválidas sin tocar el pedido', () => {
     const order = sampleOrder()
 
     expect(() => transitionPaymentStatus(order, 'pagado')).toThrow(RangeError)
+    expect(() => transitionFulfillmentStatus(order, 'preparando')).toThrow(/pagado/i)
     expect(() => transitionFulfillmentStatus(order, 'entregado')).toThrow(RangeError)
-    expect(order.history).toHaveLength(2)
+    expect(order.history).toHaveLength(3)
   })
 
-  it('mantiene los dos ejes independientes', () => {
-    const paid = transitionPaymentStatus(sampleOrder(), 'por_verificar')
+  it('solo permite preparar después de aprobar pago y confirmar inventario', () => {
+    const review = transitionPaymentStatus(sampleOrder(), 'por_verificar')
+    expect(() => transitionFulfillmentStatus(review, 'preparando')).toThrow(/pagado/i)
+    const paid = transitionPaymentStatus(review, 'pagado', null, undefined, {
+      inventoryAvailable: true,
+    })
     const preparing = transitionFulfillmentStatus(paid, 'preparando')
 
-    expect(preparing.paymentStatus).toBe('por_verificar')
+    expect(preparing.paymentStatus).toBe('pagado')
+    expect(preparing.orderStatus).toBe('confirmed')
     expect(preparing.fulfillmentStatus).toBe('preparando')
+  })
+
+  it('marca el pedido como incidencia si el pago se aprueba sin stock suficiente', () => {
+    const review = transitionPaymentStatus(sampleOrder(), 'por_verificar')
+    const paid = transitionPaymentStatus(review, 'pagado', null, undefined, {
+      inventoryAvailable: false,
+    })
+
+    expect(paid.paymentStatus).toBe('pagado')
+    expect(paid.orderStatus).toBe('inventory_exception')
+    expect(() => transitionFulfillmentStatus(paid, 'preparando')).toThrow(/pagado/i)
+    expect(() => resolveInventoryException(paid, false)).toThrow(/stock suficiente/i)
+    const resolved = resolveInventoryException(paid, true)
+    expect(resolved.orderStatus).toBe('confirmed')
+    expect(transitionFulfillmentStatus(resolved, 'preparando').fulfillmentStatus).toBe('preparando')
   })
 })
 

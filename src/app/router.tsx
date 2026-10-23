@@ -15,6 +15,12 @@ const basename = baseUrl === '/' ? '/' : baseUrl.replace(/\/$/, '')
 const router = createBrowserRouter(
   [
     {
+      path: '/admin',
+      lazy: async () => ({
+        Component: (await import('@/features/admin/remote/RemoteAdminPage')).RemoteAdminPage,
+      }),
+    },
+    {
       path: '/',
       element: <StoreLayout />,
       children: [
@@ -44,10 +50,6 @@ const router = createBrowserRouter(
             Component: (await import('@/features/order-tracking/OrderTrackingPage'))
               .OrderTrackingPage,
           }),
-        },
-        {
-          path: 'admin/*',
-          lazy: async () => ({ Component: (await import('@/features/admin/AdminPage')).AdminPage }),
         },
         {
           path: 'producto/:slug',
