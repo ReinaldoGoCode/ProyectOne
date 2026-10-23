@@ -181,6 +181,10 @@ export interface Order {
   readonly shippingAddress: ShippingAddress | null
   /** Agencia escrita por el comprador; sin integración con MRW ni ZOOM. */
   readonly shippingAgency: string | null
+  /** Datos de despacho registrados manualmente por la tienda. */
+  readonly shippingCompany?: string | null | undefined
+  readonly shippingTrackingNumber?: string | null | undefined
+  readonly shippingNotes?: string | null | undefined
   readonly paymentMethod: PaymentMethod
   /** Public method instructions captured at checkout; absent on older local orders. */
   readonly paymentInstructions?: string | null | undefined

@@ -39,6 +39,22 @@ Deno.serve(async (request) => {
         p_note: note,
         p_actor_user_id: admin.userId,
       }))
+    } else if (body.action === 'shipping') {
+      const shippingCompany =
+        typeof body.shippingCompany === 'string' ? body.shippingCompany.trim().slice(0, 80) : ''
+      const shippingTrackingNumber =
+        typeof body.shippingTrackingNumber === 'string'
+          ? body.shippingTrackingNumber.trim().slice(0, 80)
+          : ''
+      const shippingNotes =
+        typeof body.shippingNotes === 'string' ? body.shippingNotes.trim().slice(0, 500) : ''
+      ;({ data: result, error } = await admin.service.rpc('admin_set_shipping_details', {
+        p_order_id: body.orderId,
+        p_shipping_company: shippingCompany,
+        p_shipping_tracking_number: shippingTrackingNumber,
+        p_shipping_notes: shippingNotes,
+        p_actor_user_id: admin.userId,
+      }))
     } else if (body.action === 'resolve_inventory') {
       ;({ data: result, error } = await admin.service.rpc('admin_resolve_inventory_exception', {
         p_order_id: body.orderId,

@@ -30,8 +30,8 @@ La implementación actual incluye:
 - Checkout de invitado, compra directa sin borrar el carrito y consulta de pedidos.
 - Gateway Supabase con cotización autoritativa, idempotencia, seguimiento privado y referencia de pago.
 - Panel remoto protegido con Supabase Auth para pedidos, inventario CSV, pagos, entregas y WhatsApp.
-- 11 migraciones, 16 Edge Functions, RLS y semilla de catálogo preparados sin proyecto enlazado.
-- Suite de 196 pruebas de aplicación y 33 comprobaciones SQL/RLS con PGlite.
+- 12 migraciones, 16 Edge Functions, RLS y semilla de catálogo preparados sin proyecto enlazado.
+- Suite de 197 pruebas de aplicación y 37 comprobaciones SQL/RLS con PGlite.
 
 Todavía no hay backend compartido activo, pagos ni envíos reales. El flujo remoto no se ha probado
 contra Supabase Cloud ni Meta. Los pedidos locales no se comparten entre dispositivos. El checkout
@@ -136,11 +136,12 @@ norte-moda/
 ├─ DOCUMENTACION.md                 # este documento
 ├─ public/
 │  ├─ favicon.svg
+│  ├─ _headers                       # cabeceras de seguridad para Cloudflare
 │  ├─ _redirects                    # fallback SPA en Cloudflare
 │  └─ images/products/placeholder.svg
 ├─ scripts/
 │  ├─ export-supabase-seed.mjs
-│  └─ verify-database.mjs           # migraciones y 33 comprobaciones SQL/RLS
+│  └─ verify-database.mjs           # migraciones y 37 comprobaciones SQL/RLS
 ├─ src/
 │  ├─ app/                          # router, layout y providers
 │  ├─ components/                   # layout y UI reutilizable
@@ -164,7 +165,7 @@ norte-moda/
 │  └─ vite-env.d.ts
 ├─ supabase/
 │  ├─ functions/                    # 16 Edge Functions
-│  ├─ migrations/                   # 11 migraciones
+│  ├─ migrations/                   # 12 migraciones
 │  ├─ config.toml
 │  └─ seed.sql
 ├─ eslint.config.js
@@ -362,6 +363,8 @@ facturables siguen desactivadas.
 - La referencia del comprador solo deja el pago «por verificar»; «Pagado» exige una acción posterior
   de una persona autorizada. No hay conciliación bancaria ni aprobación automática.
 - Cada transición se agrega al historial. La entrega avanza en preparación, despacho y entrega.
+- Para envíos manuales se registran empresa, número de guía y observaciones; no hay integración con
+  MRW ni Zoom. El comprador ve esos datos con su enlace privado.
 - Importa existencias por CSV con transacción, control de cambios obsoletos y movimientos auditables.
 - Administra imágenes, métricas, métodos manuales y derivaciones de WhatsApp.
 - El panel local sin autenticación fue retirado. Sin Supabase, `/admin` muestra la configuración
@@ -446,12 +449,12 @@ ninguna marca** y el proyecto no está afiliado a ninguna tienda.
 
 | Comando             | Resultado                                          |
 | ------------------- | -------------------------------------------------- |
-| `pnpm check`        | Correcto: tipos, lint y 196 pruebas en 22 archivos |
-| `pnpm test:db`      | Correcto: 33 comprobaciones SQL/RLS con PGlite     |
+| `pnpm check`        | Correcto: tipos, lint y 197 pruebas en 22 archivos |
+| `pnpm test:db`      | Correcto: 37 comprobaciones SQL/RLS con PGlite     |
 | `pnpm format:check` | Correcto                                           |
 | `pnpm build`        | Correcto; genera `dist/`                           |
 
-`scripts/verify-database.mjs` crea los esquemas que Supabase proporciona, aplica las 11 migraciones
+`scripts/verify-database.mjs` crea los esquemas que Supabase proporciona, aplica las 12 migraciones
 en orden, carga el seed y comprueba catálogo, cotización, idempotencia, manipulación de totales,
 consulta privada, token incorrecto, referencia de pago, aprobación manual, descuento único de stock,
 transiciones, RLS y permisos de `anon`, `authenticated` y `service_role`. PGlite valida SQL real,
@@ -519,13 +522,15 @@ consulta de pedido y panel a 390 px y 1440 px, y guardar capturas sin datos pers
 
 El repositorio local se reconstruyó desde `origin/main` conservando los cambios de trabajo. El
 2026-10-22 se publicó el commit `df24557` en `main`; el workflow `39880826745` completó con éxito la
-verificación, las 33 comprobaciones SQL/RLS, el formato, el build y el despliegue en Pages. La URL
+verificación, las 33 comprobaciones SQL/RLS que existían entonces, el formato, el build y el despliegue en Pages. La URL
 <https://reinaldogocode.github.io/ProyectOne/> respondió HTTP 200 en inicio, catálogo, producto,
 pedido y admin con el nuevo bundle.
 
 GitHub Pages sirve solo la demo; para una tienda operativa hay que usar un hosting permitido y
-conectar Supabase. El workflow manual `.github/workflows/deploy-cloudflare.yml` queda preparado para
-Cloudflare Pages, pero no se ejecutó porque no hay cuenta, token ni `accountId`.
+conectar Supabase. El workflow `.github/workflows/deploy-cloudflare.yml` se ejecuta en cada push a
+`main`, comprueba los secretos y omite el despliegue hasta que existan `CLOUDFLARE_API_TOKEN`,
+`CLOUDFLARE_ACCOUNT_ID` y un proyecto de Pages. Todavía no hay cuenta, token ni `accountId`, así que
+no se ha ejecutado un despliegue en Cloudflare.
 
 No hay credenciales ni secretos de producción en el código. `.env.local` y cualquier `.env` están
 excluidos por `.gitignore`; `.env.example` solo contiene nombres y valores vacíos.
@@ -633,8 +638,8 @@ excluidos por `.gitignore`; `.env.example` solo contiene nombres y valores vací
 - UI de seguimiento con enlace privado, referencia, mensajes demo/remoto y actualización de estado.
 - Compra directa aislada que conserva el carrito original.
 - Webhook de WhatsApp con firma, deduplicación, cola, estados, conversaciones y fallback.
-- 11 migraciones y 16 Edge Functions; validación con PGlite mediante `pnpm test:db` (33 comprobaciones).
-- 196 pruebas de aplicación en 22 archivos; `pnpm build` y `pnpm format:check` correctos.
+- 12 migraciones y 16 Edge Functions; validación con PGlite mediante `pnpm test:db` (37 comprobaciones).
+- 197 pruebas de aplicación en 22 archivos; `pnpm build` y `pnpm format:check` correctos.
 - Workflow de Cloudflare Pages preparado; no ejecutado por falta de credenciales.
 - El backend no se aplicó a Supabase Cloud y WhatsApp no se probó con Meta.
 
@@ -716,7 +721,7 @@ El detalle completo está en `docs/03-decisiones.md`. Resumen:
 
 La siguiente fase es activar y validar la infraestructura que ya existe en código:
 
-1. Crear un proyecto Supabase Free, enlazarlo y aplicar las 11 migraciones y, si se desea, el seed.
+1. Crear un proyecto Supabase Free, enlazarlo y aplicar las 12 migraciones y, si se desea, el seed.
 2. Desplegar las 16 Edge Functions, configurar secretos y registrar el usuario administrador.
 3. Probar en staging el checkout, el enlace privado, la referencia de pago, RLS, el descuento de
    stock y el panel. Verificar PostgREST y Edge Runtime, no solo PGlite.
@@ -746,8 +751,8 @@ pnpm dev          # http://localhost:5173
 ### Verificación
 
 ```bash
-pnpm test         # 196 pruebas en 22 archivos (verificación actual)
-pnpm test:db      # 33 comprobaciones SQL/RLS con PGlite
+pnpm test         # 197 pruebas en 22 archivos (verificación actual)
+pnpm test:db      # 37 comprobaciones SQL/RLS con PGlite
 pnpm typecheck    # tsc --noEmit
 pnpm lint         # ESLint sin advertencias
 pnpm format:check # Prettier

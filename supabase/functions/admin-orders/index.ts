@@ -13,7 +13,7 @@ Deno.serve(async (request) => {
     const { data, error } = await admin.service
       .from('orders')
       .select(
-        'id, code, created_at, customer, total_cents, order_status, payment_status, fulfillment_status, order_items(id, product_name, size, color, quantity)',
+        'id, code, created_at, customer, total_cents, delivery_method, shipping_agency, shipping_company, shipping_tracking_number, shipping_notes, order_status, payment_status, fulfillment_status, order_items(id, product_name, size, color, quantity)',
       )
       .order('created_at', { ascending: false })
       .limit(500)

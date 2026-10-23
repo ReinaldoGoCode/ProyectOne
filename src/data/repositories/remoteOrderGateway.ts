@@ -98,6 +98,11 @@ export interface RemoteAdminOrder {
     readonly lastName: string
     readonly phone: string
   }
+  readonly deliveryMethod: 'delivery_local' | 'envio_nacional' | 'retiro'
+  readonly shippingAgency: string | null
+  readonly shippingCompany: string | null
+  readonly shippingTrackingNumber: string | null
+  readonly shippingNotes: string | null
   readonly totalCents: number
   readonly paymentReference: string | null
   readonly orderStatus: 'awaiting_payment' | 'confirmed' | 'inventory_exception' | 'cancelled'
@@ -840,6 +845,14 @@ function parseAdminOrder(value: unknown): RemoteAdminOrder | null {
     !validOrderStatus ||
     !validPaymentStatus ||
     !validFulfillmentStatus ||
+    !['delivery_local', 'envio_nacional', 'retiro'].includes(String(value['delivery_method'])) ||
+    !(value['shipping_agency'] === null || typeof value['shipping_agency'] === 'string') ||
+    !(value['shipping_company'] === null || typeof value['shipping_company'] === 'string') ||
+    !(
+      value['shipping_tracking_number'] === null ||
+      typeof value['shipping_tracking_number'] === 'string'
+    ) ||
+    !(value['shipping_notes'] === null || typeof value['shipping_notes'] === 'string') ||
     !(value['payment_reference'] === null || typeof value['payment_reference'] === 'string') ||
     typeof customer['firstName'] !== 'string' ||
     typeof customer['lastName'] !== 'string' ||
@@ -872,6 +885,11 @@ function parseAdminOrder(value: unknown): RemoteAdminOrder | null {
       lastName: customer['lastName'],
       phone: customer['phone'],
     },
+    deliveryMethod: value['delivery_method'] as RemoteAdminOrder['deliveryMethod'],
+    shippingAgency: value['shipping_agency'],
+    shippingCompany: value['shipping_company'],
+    shippingTrackingNumber: value['shipping_tracking_number'],
+    shippingNotes: value['shipping_notes'],
     totalCents: value['total_cents'] as number,
     paymentReference: value['payment_reference'],
     orderStatus: orderStatus as RemoteAdminOrder['orderStatus'],
@@ -1002,9 +1020,12 @@ function parseRemoteWhatsAppHandoff(value: unknown): RemoteWhatsAppHandoff | nul
 
 export async function updateRemoteAdminOrder(change: {
   readonly orderId: string
-  readonly action: 'payment' | 'fulfillment' | 'resolve_inventory'
+  readonly action: 'payment' | 'fulfillment' | 'shipping' | 'resolve_inventory'
   readonly status?: string
   readonly note?: string
+  readonly shippingCompany?: string
+  readonly shippingTrackingNumber?: string
+  readonly shippingNotes?: string
 }): Promise<unknown> {
   const client = getSupabaseBrowserClient()
   if (!client) throw new Error('Supabase todavía no está configurado.')
@@ -1185,6 +1206,10 @@ function parseRemotePublicOrder(value: unknown): Order | null {
     deliveryMethod,
     shippingAddress: address,
     shippingAgency: value['shippingAgency'],
+    shippingCompany: typeof value['shippingCompany'] === 'string' ? value['shippingCompany'] : null,
+    shippingTrackingNumber:
+      typeof value['shippingTrackingNumber'] === 'string' ? value['shippingTrackingNumber'] : null,
+    shippingNotes: typeof value['shippingNotes'] === 'string' ? value['shippingNotes'] : null,
     paymentMethod,
     paymentInstructions: value['paymentInstructions'],
     paymentReference:

@@ -109,6 +109,9 @@ export interface WhatsAppDeliveryOptionFact {
 export interface WhatsAppOrderSummaryFact extends WhatsAppOrderFacts {
   readonly deliveryMethod?: 'delivery_local' | 'envio_nacional' | 'retiro'
   readonly shippingAgency?: string | null
+  readonly shippingCompany?: string | null
+  readonly shippingTrackingNumber?: string | null
+  readonly shippingNotes?: string | null
   readonly shippingCents?: number
   readonly paymentMethod?: string
 }
@@ -432,8 +435,8 @@ export function analyzeWhatsAppMessage(input: {
       : null
   const explicitReference = EXPLICIT_REFERENCE.exec(text)?.[1]?.toUpperCase() ?? null
   const paymentIntent = PAYMENT_QUERY.test(text)
-  const deliveryIntent = DELIVERY_QUERY.test(text)
-  const orderIntent = ORDER_QUERY.test(text)
+  const deliveryIntent = DELIVERY_QUERY.test(normalizeText(text))
+  const orderIntent = ORDER_QUERY.test(normalizeText(text))
   const compareIntent = COMPARE_QUERY.test(normalizeText(text))
   const recommendationIntent = RECOMMEND_QUERY.test(text)
   const productIntent = PRODUCT_QUERY.test(text)
@@ -522,7 +525,15 @@ function renderOrderStatus(order: WhatsAppOrderSummaryFact): string {
   if (order.deliveryMethod === 'envio_nacional' && order.shippingAgency) {
     lines.push(`Agencia indicada en el pedido: ${order.shippingAgency}.`)
   }
-  if (order.fulfillmentStatus === 'shipped' && !order.shippingAgency) {
+  if (order.shippingCompany || order.shippingTrackingNumber) {
+    lines.push(
+      `Despacho manual: ${order.shippingCompany ?? 'empresa no registrada'} · guía ${order.shippingTrackingNumber ?? 'no registrada'}.`,
+    )
+  }
+  if (order.shippingNotes) {
+    lines.push(`Observaciones de envío: ${order.shippingNotes}.`)
+  }
+  if (order.fulfillmentStatus === 'shipped' && !order.shippingTrackingNumber) {
     lines.push('No hay un transportista o número de guía registrado en el sistema.')
   }
   return lines.join('\n')
@@ -616,7 +627,7 @@ export function composeWhatsAppReply(input: ComposeWhatsAppReplyInput): WhatsApp
       message = renderOrderStatus(order)
       if (
         analysis.intent === 'delivery_status' &&
-        order.fulfillmentStatus !== 'shipped' &&
+        !order.shippingTrackingNumber &&
         order.fulfillmentStatus !== 'delivered'
       ) {
         message += '\nTodavía no hay una guía de despacho registrada.'

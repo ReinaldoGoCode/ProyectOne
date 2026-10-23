@@ -25,6 +25,7 @@ import type {
   RemoteWhatsAppHandoff,
 } from '@/data/repositories/remoteOrderGateway'
 import type { Catalog } from '@/domain/types'
+import { DELIVERY_METHOD_LABELS } from '@/domain/labels'
 import { AdminDemoPreview } from './AdminDemoPreview'
 import { RemoteInventoryPanel } from './RemoteInventoryPanel'
 import { RemotePaymentSettingsPanel } from './RemotePaymentSettingsPanel'
@@ -283,6 +284,45 @@ export function RemoteAdminPage() {
       setNotice(`Pedido ${order.code} actualizado.`)
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'No se pudo guardar el cambio.')
+    } finally {
+      setBusyOrderId(null)
+    }
+  }
+
+  async function saveShippingDetails(
+    order: RemoteAdminOrder,
+    details: {
+      readonly shippingCompany: string
+      readonly shippingTrackingNumber: string
+      readonly shippingNotes: string
+    },
+  ): Promise<void> {
+    setError('')
+    setNotice('')
+    setBusyOrderId(order.id)
+    try {
+      await updateRemoteAdminOrder({
+        orderId: order.id,
+        action: 'shipping',
+        shippingCompany: details.shippingCompany,
+        shippingTrackingNumber: details.shippingTrackingNumber,
+        shippingNotes: details.shippingNotes,
+      })
+      const [nextOrders, nextHandoffs, nextCatalog, nextPaymentMethods] = await Promise.all([
+        listRemoteAdminOrders(),
+        listRemoteWhatsAppHandoffs(),
+        listRemoteAdminCatalog(),
+        listRemoteAdminPaymentMethods(),
+      ])
+      setOrders(nextOrders)
+      setHandoffs(nextHandoffs)
+      setAdminCatalog(nextCatalog)
+      setPaymentMethods(nextPaymentMethods)
+      setNotice(`Datos de envío de ${order.code} guardados.`)
+    } catch (caught) {
+      setError(
+        caught instanceof Error ? caught.message : 'No se pudieron guardar los datos de envío.',
+      )
     } finally {
       setBusyOrderId(null)
     }
@@ -768,6 +808,22 @@ export function RemoteAdminPage() {
                       value={FULFILLMENT_LABELS[order.fulfillmentStatus]}
                     />
                   </div>
+                  <p className="mt-3 text-sm text-stone-600">
+                    Entrega: {DELIVERY_METHOD_LABELS[order.deliveryMethod]}
+                    {order.shippingAgency ? ` · Agencia indicada: ${order.shippingAgency}` : ''}
+                  </p>
+                  {order.deliveryMethod === 'retiro' ? (
+                    <p className="mt-2 text-xs text-stone-500">
+                      Retiro en tienda: no requiere empresa de transporte ni guía.
+                    </p>
+                  ) : (
+                    <ShippingDetailsForm
+                      key={`${order.id}:${order.shippingCompany ?? ''}:${order.shippingTrackingNumber ?? ''}:${order.shippingNotes ?? ''}`}
+                      order={order}
+                      busy={busyOrderId === order.id}
+                      onSave={(details) => saveShippingDetails(order, details)}
+                    />
+                  )}
                   {order.paymentReference ? (
                     <p className="mt-3 rounded-xl bg-amber-50 p-3 text-sm text-amber-950">
                       Referencia informada por WhatsApp: <strong>{order.paymentReference}</strong>.
@@ -971,5 +1027,94 @@ function ActionButton({
     >
       {busy ? 'Guardando…' : children}
     </button>
+  )
+}
+
+function ShippingDetailsForm({
+  order,
+  busy,
+  onSave,
+}: {
+  readonly order: RemoteAdminOrder
+  readonly busy: boolean
+  readonly onSave: (details: {
+    readonly shippingCompany: string
+    readonly shippingTrackingNumber: string
+    readonly shippingNotes: string
+  }) => Promise<void>
+}) {
+  const [shippingCompany, setShippingCompany] = useState(order.shippingCompany ?? '')
+  const [shippingTrackingNumber, setShippingTrackingNumber] = useState(
+    order.shippingTrackingNumber ?? '',
+  )
+  const [shippingNotes, setShippingNotes] = useState(order.shippingNotes ?? '')
+
+  const summary =
+    order.shippingCompany || order.shippingTrackingNumber
+      ? `${order.shippingCompany ?? 'Sin empresa'} · ${order.shippingTrackingNumber ?? 'Sin guía'}`
+      : 'Sin registrar'
+
+  return (
+    <details className="mt-3 rounded-2xl bg-paper p-4">
+      <summary className="cursor-pointer text-sm font-medium">
+        Datos de envío manual · <span className="font-normal text-stone-600">{summary}</span>
+      </summary>
+      <p className="mt-2 text-xs leading-relaxed text-stone-500">
+        Registra la empresa y la guía que entrega MRW, Zoom u otro transportista. No hay una
+        integración oficial: esta información se actualiza a mano y el comprador la ve con su enlace
+        privado.
+      </p>
+      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+        <label className="text-xs font-medium text-stone-600">
+          Empresa de transporte
+          <input
+            value={shippingCompany}
+            onChange={(event) => {
+              setShippingCompany(event.currentTarget.value)
+            }}
+            maxLength={80}
+            autoComplete="off"
+            placeholder="MRW, Zoom u otro"
+            className="mt-1.5 min-h-11 w-full rounded-xl bg-white px-3 text-sm text-ink ring-1 ring-stone-900/12 focus-visible:ring-2 focus-visible:ring-ink/30 focus-visible:outline-none"
+          />
+        </label>
+        <label className="text-xs font-medium text-stone-600">
+          Número de guía
+          <input
+            value={shippingTrackingNumber}
+            onChange={(event) => {
+              setShippingTrackingNumber(event.currentTarget.value)
+            }}
+            maxLength={80}
+            autoComplete="off"
+            placeholder="Guía o referencia"
+            className="mt-1.5 min-h-11 w-full rounded-xl bg-white px-3 text-sm text-ink ring-1 ring-stone-900/12 focus-visible:ring-2 focus-visible:ring-ink/30 focus-visible:outline-none"
+          />
+        </label>
+        <label className="text-xs font-medium text-stone-600 sm:col-span-2">
+          Observaciones
+          <textarea
+            value={shippingNotes}
+            onChange={(event) => {
+              setShippingNotes(event.currentTarget.value)
+            }}
+            maxLength={500}
+            rows={2}
+            placeholder="Sucursal, fecha de despacho, incidencias…"
+            className="mt-1.5 w-full rounded-xl bg-white px-3 py-2 text-sm text-ink ring-1 ring-stone-900/12 focus-visible:ring-2 focus-visible:ring-ink/30 focus-visible:outline-none"
+          />
+        </label>
+      </div>
+      <button
+        type="button"
+        disabled={busy}
+        onClick={() => {
+          void onSave({ shippingCompany, shippingTrackingNumber, shippingNotes })
+        }}
+        className="mt-3 rounded-full bg-white px-3 py-2 text-xs ring-1 ring-stone-900/15 hover:bg-stone-50 disabled:opacity-50"
+      >
+        {busy ? 'Guardando…' : 'Guardar datos de envío'}
+      </button>
+    </details>
   )
 }

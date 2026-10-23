@@ -45,6 +45,9 @@ verify_jwt = true
 [functions.admin-whatsapp-handoffs]
 verify_jwt = true
 
+[functions.admin-dashboard]
+verify_jwt = true
+
 [functions.whatsapp-webhook]
 verify_jwt = false
 

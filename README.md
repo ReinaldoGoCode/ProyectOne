@@ -29,10 +29,10 @@ demostración de portafolio, no como alojamiento de una tienda comercial.
 - Creación idempotente de pedidos y enlace privado de seguimiento con token de 256 bits.
 - Registro de referencia de pago por parte del comprador, siempre pendiente de revisión manual.
 - Panel remoto protegido con Supabase Auth: pedidos, pagos, entregas, inventario CSV, imágenes,
-  métodos manuales, métricas y cola de atención de WhatsApp.
+  métodos manuales, datos de despacho, métricas y cola de atención de WhatsApp.
 - Webhook de WhatsApp Cloud API con firma HMAC, deduplicación, reintentos, estados, conversaciones y
   fallback a enlaces `wa.me`/mensaje copiable. Los envíos salientes están desactivados.
-- 196 pruebas de aplicación en 22 archivos y 33 comprobaciones de base de datos con PGlite.
+- 197 pruebas de aplicación en 22 archivos y 37 comprobaciones de base de datos con PGlite.
 
 ## Qué no incluye, ni simula
 
@@ -105,7 +105,7 @@ pedido por uno local.
 | `pnpm format:check`       | Verifica Prettier                             |
 | `pnpm test`               | Vitest                                        |
 | `pnpm check`              | Tipos, lint y pruebas                         |
-| `pnpm test:db`            | Migraciones, seed y 33 comprobaciones SQL/RLS |
+| `pnpm test:db`            | Migraciones, seed y 37 comprobaciones SQL/RLS |
 | `pnpm supabase:seed`      | Regenera `supabase/seed.sql`                  |
 | `pnpm supabase:start`     | Stack local (requiere Docker)                 |
 | `pnpm supabase:reset`     | Reaplica migraciones y seed en local          |
@@ -149,8 +149,10 @@ ficticios que no inicia sesión ni guarda cambios. El antiguo panel local sin au
 retirado.
 
 El panel cubre pedidos, revisión manual de pagos, logística, inventario por CSV, alertas de stock
-bajo, movimientos, imágenes y derivaciones de WhatsApp. Los pagos externos (tarjetas, PayPal, Binance
-Pay) aparecen como no configurados y no se pueden activar sin integración real.
+bajo, movimientos, imágenes y derivaciones de WhatsApp. Para envíos nacionales se registran a mano
+la empresa, la guía y observaciones; el comprador las ve con su enlace privado. Los pagos externos
+(tarjetas, PayPal, Binance Pay) aparecen como no configurados y no se pueden activar sin integración
+real.
 
 ## WhatsApp
 
@@ -166,7 +168,7 @@ Pay) aparecen como no configurados y no se pueden activar sin integración real.
 
 ## Backend Supabase
 
-El repositorio contiene 11 migraciones y 16 Edge Functions. Las migraciones crean pedidos, catálogo,
+El repositorio contiene 12 migraciones y 16 Edge Functions. Las migraciones crean pedidos, catálogo,
 cotizaciones, auditoría, inventario, Storage, métodos de pago, métricas, contexto de WhatsApp,
 límites de IA y referencias públicas de pago. RLS está activo en las tablas sensibles.
 
@@ -198,8 +200,8 @@ Verificado el 2026-10-22:
 
 | Comando             | Resultado                                |
 | ------------------- | ---------------------------------------- |
-| `pnpm check`        | Tipos, lint y 196 pruebas en 22 archivos |
-| `pnpm test:db`      | 33 comprobaciones SQL/RLS correctas      |
+| `pnpm check`        | Tipos, lint y 197 pruebas en 22 archivos |
+| `pnpm test:db`      | 37 comprobaciones SQL/RLS correctas      |
 | `pnpm format:check` | Correcto                                 |
 | `pnpm build`        | Correcto; genera `dist/`                 |
 
@@ -211,9 +213,11 @@ ni una prueba E2E en navegador real.
 
 - `deploy.yml`: en cada push a `main` instala dependencias, verifica tipos, lint, pruebas, SQL y
   formato, construye y publica en GitHub Pages.
-- `deploy-cloudflare.yml`: workflow manual preparado para Cloudflare Pages. Requiere
-  `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` y un proyecto llamado `norte-moda`.
-- `public/_redirects` permite el fallback SPA en Cloudflare Pages.
+- `deploy-cloudflare.yml`: en cada push a `main` comprueba los secretos y publica en Cloudflare
+  Pages cuando existen `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` y el proyecto `norte-moda`;
+  sin ellos, se omite con un aviso. También puede lanzarse a mano.
+- `public/_redirects` permite el fallback SPA y `public/_headers` añade cabeceras de seguridad en
+  Cloudflare Pages.
 
 GitHub Pages se publica bajo `/ProyectOne/`; el workflow define `VITE_BASE_PATH` y copia las rutas
 conocidas a archivos estáticos. Las rutas desconocidas usan `404.html`, una limitación de Pages.
@@ -264,7 +268,7 @@ norte-moda/
 │  └─ lib/                   # Supabase, WhatsApp, rutas y colores
 ├─ supabase/
 │  ├─ functions/             # 16 Edge Functions
-│  ├─ migrations/            # 11 migraciones SQL
+│  ├─ migrations/            # 12 migraciones SQL
 │  ├─ config.toml
 │  └─ seed.sql
 └─ package.json

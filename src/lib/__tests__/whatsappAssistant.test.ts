@@ -231,6 +231,27 @@ describe('asistente conversacional conectado a datos del backend', () => {
     expect(reply.message).toContain('Preparación y envío: en preparación')
   })
 
+  it('informa solo los datos de despacho manual verificados para el pedido', () => {
+    const analysis = analyzeWhatsAppMessage({
+      text: '¿Dónde va mi envío NM-0007?',
+      state: EMPTY_WHATSAPP_CONVERSATION_STATE,
+      products: CATALOG,
+    })
+    const shipped: WhatsAppOrderSummaryFact = {
+      ...ORDER,
+      fulfillmentStatus: 'shipped',
+      shippingCompany: 'MRW',
+      shippingTrackingNumber: 'MRW-123456',
+      shippingNotes: 'Sucursal centro',
+    }
+    const reply = composeWhatsAppReply({ analysis, products: CATALOG, order: shipped })
+
+    expect(analysis.intent).toBe('delivery_status')
+    expect(reply.message).toContain('Despacho manual: MRW · guía MRW-123456')
+    expect(reply.message).toContain('Observaciones de envío: Sucursal centro')
+    expect(reply.message).not.toContain('No hay un transportista')
+  })
+
   it('respeta la solicitud de dejar de recibir mensajes sin enviar una respuesta', () => {
     const analysis = analyzeWhatsAppMessage({
       text: 'Por favor, no me contactes más',

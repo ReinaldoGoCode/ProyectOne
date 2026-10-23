@@ -622,6 +622,10 @@ function parseOrderFacts(value: unknown): WhatsAppOrderSummaryFact | null {
     (value['deliveryMethod'] !== null &&
       !['delivery_local', 'envio_nacional', 'retiro'].includes(String(value['deliveryMethod']))) ||
     (value['shippingAgency'] !== null && typeof value['shippingAgency'] !== 'string') ||
+    (value['shippingCompany'] !== null && typeof value['shippingCompany'] !== 'string') ||
+    (value['shippingTrackingNumber'] !== null &&
+      typeof value['shippingTrackingNumber'] !== 'string') ||
+    (value['shippingNotes'] !== null && typeof value['shippingNotes'] !== 'string') ||
     !Number.isSafeInteger(value['shippingCents']) ||
     typeof value['paymentMethod'] !== 'string'
   ) {
@@ -640,6 +644,9 @@ function parseOrderFacts(value: unknown): WhatsAppOrderSummaryFact | null {
     paymentMethod: value['paymentMethod'],
     deliveryMethod: value['deliveryMethod'] as WhatsAppOrderSummaryFact['deliveryMethod'],
     shippingAgency: value['shippingAgency'] as string | null,
+    shippingCompany: value['shippingCompany'] as string | null,
+    shippingTrackingNumber: value['shippingTrackingNumber'] as string | null,
+    shippingNotes: value['shippingNotes'] as string | null,
     shippingCents: value['shippingCents'] as number,
   }
 }

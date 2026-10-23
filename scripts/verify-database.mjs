@@ -255,6 +255,42 @@ try {
     [created.id, adminId],
   )
   ok(prepared.result.fulfillmentStatus === 'preparing', 'pasa a preparación tras el pago')
+
+  await expectError(
+    `select public.admin_set_shipping_details($1::uuid, 'MRW', 'MRW-0001', 'Sucursal centro', $2::uuid)`,
+    [created.id, '44444444-4444-4444-8444-444444444444'],
+    '42501',
+    'un usuario sin membresía no puede registrar datos de envío',
+  )
+  const [shippingDetails] = await query(
+    `select public.admin_set_shipping_details($1::uuid, 'MRW', 'MRW-0001', 'Sucursal centro', $2::uuid) as result`,
+    [created.id, adminId],
+  )
+  ok(
+    shippingDetails.result.shippingCompany === 'MRW' &&
+      shippingDetails.result.shippingTrackingNumber === 'MRW-0001',
+    'un administrador registra empresa y guía manuales',
+  )
+  const [shippingLookup] = await query('select public.lookup_public_order($1, $2) as order_data', [
+    created.code,
+    tokenHash,
+  ])
+  ok(
+    shippingLookup.order_data?.shippingCompany === 'MRW' &&
+      shippingLookup.order_data?.shippingTrackingNumber === 'MRW-0001' &&
+      shippingLookup.order_data?.shippingNotes === 'Sucursal centro',
+    'el comprador ve los datos de envío con su enlace privado',
+  )
+  const [whatsappShipping] = await query(
+    `select public.lookup_whatsapp_orders(regexp_replace($1, '[^0-9]', '', 'g'), $2) as orders`,
+    [customer.phone, created.code],
+  )
+  ok(
+    whatsappShipping.orders?.[0]?.shippingCompany === 'MRW' &&
+      whatsappShipping.orders?.[0]?.shippingTrackingNumber === 'MRW-0001',
+    'el asistente de WhatsApp recibe los datos de despacho del pedido verificado',
+  )
+
   const [shipped] = await query(
     `select public.admin_update_fulfillment($1::uuid, 'shipped', 'MRW guía manual', $2::uuid) as result`,
     [created.id, adminId],

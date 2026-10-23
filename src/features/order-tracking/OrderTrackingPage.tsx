@@ -323,6 +323,38 @@ export function OrderTrackingPage() {
             </div>
           </div>
 
+          {order.shippingCompany || order.shippingTrackingNumber || order.shippingNotes ? (
+            <div className="mt-4 rounded-2xl bg-paper p-4">
+              <h3 className="font-medium">Datos de envío</h3>
+              <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
+                <div>
+                  <dt className="text-xs text-stone-500">Empresa</dt>
+                  <dd className="mt-0.5">{order.shippingCompany ?? 'No registrada'}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-stone-500">Guía</dt>
+                  <dd className="mt-0.5">{order.shippingTrackingNumber ?? 'No registrada'}</dd>
+                </div>
+                {order.shippingNotes ? (
+                  <div className="sm:col-span-2">
+                    <dt className="text-xs text-stone-500">Observaciones</dt>
+                    <dd className="mt-0.5 whitespace-pre-wrap">{order.shippingNotes}</dd>
+                  </div>
+                ) : null}
+              </dl>
+              {order.shippingAgency ? (
+                <p className="mt-3 text-xs text-stone-500">
+                  Agencia indicada por el comprador: {order.shippingAgency}
+                </p>
+              ) : null}
+            </div>
+          ) : order.deliveryMethod === 'envio_nacional' ? (
+            <p className="mt-4 rounded-2xl bg-paper p-4 text-sm text-stone-600">
+              El envío nacional se coordina manualmente. La empresa y la guía aparecerán aquí cuando
+              la tienda las registre.
+            </p>
+          ) : null}
+
           <div className="mt-7">
             <h3 className="font-medium">Artículos</h3>
             <ul className="mt-3 divide-y divide-stone-900/10 border-y border-stone-900/10">

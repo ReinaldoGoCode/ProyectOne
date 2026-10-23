@@ -11,6 +11,8 @@ name: Desplegar en Cloudflare Pages
 # - Configurar las variables públicas del build en el entorno de Pages o en
 #   `vars` del repositorio.
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -18,8 +20,29 @@ permissions:
   deployments: write
 
 jobs:
+  preparar:
+    name: Comprobar credenciales de Cloudflare
+    runs-on: ubuntu-latest
+    outputs:
+      ready: ${{ steps.check.outputs.ready }}
+    steps:
+      - name: Comprobar secretos sin exponerlos
+        id: check
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          if [ -n "$CLOUDFLARE_API_TOKEN" ] && [ -n "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Cloudflare Pages aún no tiene credenciales; se omite el despliegue."
+          fi
+
   publicar:
     name: Verificar y publicar
+    needs: preparar
+    if: needs.preparar.outputs.ready == 'true'
     runs-on: ubuntu-latest
     environment:
       name: cloudflare-pages
