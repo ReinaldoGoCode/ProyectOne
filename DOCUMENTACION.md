@@ -515,11 +515,15 @@ consulta de pedido y panel a 390 px y 1440 px, y guardar capturas sin datos pers
   limitación de GitHub Pages: no hay reescritura de rutas.
 - `VITE_BASE_PATH` mantiene la base `/` en local y `/ProyectOne/` en Pages.
 
-El repositorio local se reconstruyó desde `origin/main` conservando los cambios de trabajo. Un push
-autorizado a `main` inicia la verificación y la publicación. GitHub Pages sirve solo la demo; para una
-tienda operativa hay que usar un hosting permitido y conectar Supabase. El workflow manual
-`.github/workflows/deploy-cloudflare.yml` queda preparado para Cloudflare Pages, pero no se ejecutó
-porque no hay cuenta, token ni `accountId`.
+El repositorio local se reconstruyó desde `origin/main` conservando los cambios de trabajo. El
+2026-10-22 se publicó el commit `df24557` en `main`; el workflow `39880826745` completó con éxito la
+verificación, las 33 comprobaciones SQL/RLS, el formato, el build y el despliegue en Pages. La URL
+<https://reinaldogocode.github.io/ProyectOne/> respondió HTTP 200 en inicio, catálogo, producto,
+pedido y admin con el nuevo bundle.
+
+GitHub Pages sirve solo la demo; para una tienda operativa hay que usar un hosting permitido y
+conectar Supabase. El workflow manual `.github/workflows/deploy-cloudflare.yml` queda preparado para
+Cloudflare Pages, pero no se ejecutó porque no hay cuenta, token ni `accountId`.
 
 No hay credenciales ni secretos de producción en el código. `.env.local` y cualquier `.env` están
 excluidos por `.gitignore`; `.env.example` solo contiene nombres y valores vacíos.
@@ -755,11 +759,9 @@ pnpm check        # tipos + lint + pruebas
 git push origin main
 ```
 
-Un push autorizado a `main` inicia el workflow y publica en GitHub Pages si pasan las
-verificaciones. El repositorio local está reconstruido desde `origin/main`; no se hizo push ni se
-ejecutó un despliegue nuevo durante esta revisión. La URL publicada puede mostrar la versión anterior
-hasta que se autorice el push. El backend Supabase y las funciones Edge no se despliegan desde este
-workflow.
+El 2026-10-22 se publicó el commit `df24557` en `main` y el workflow de Pages completó con éxito.
+La URL publicada responde con el nuevo bundle; se comprobaron inicio, catálogo, producto, pedido y
+admin con HTTP 200. El backend Supabase y las funciones Edge no se despliegan desde este workflow.
 
 ---
 
