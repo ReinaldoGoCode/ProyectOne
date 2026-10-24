@@ -165,7 +165,14 @@ En GitHub → Settings → Secrets and variables → Actions:
 
 El workflow se ejecuta en cada push a `main`. Si faltan los dos secretos, la comprobación previa
 termina correctamente y el job de publicación se omite; no falla el repositorio. Cuando los secretos
-existan, el siguiente push publica automáticamente.
+existan, el siguiente push publica automáticamente. Deben ser secretos del repositorio: el trabajo de
+comprobación no tiene asociado el entorno `cloudflare-pages`, así que no ve secretos definidos solo
+para ese entorno.
+
+El build de GitHub Pages es deliberadamente solo una demo: `.github/workflows/deploy.yml` fija la base
+`/ProyectOne/` y no recibe variables `VITE_SUPABASE_*` ni el número de WhatsApp. Las variables
+públicas indicadas aquí solo se pasan al build de Cloudflare; no añadas las variables de tienda al
+workflow de GitHub Pages.
 
 ### 2.4 Verificar y añadir dominio
 
