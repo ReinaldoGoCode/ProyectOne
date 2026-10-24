@@ -108,6 +108,23 @@ try {
   `)
   ok(Boolean(variant), 'variante con existencias disponible')
 
+  await expectError(
+    'select public.preview_public_order($1::jsonb, $2, $3::uuid)',
+    [JSON.stringify([{ variant_id: variant.id, quantity: variant.stock + 1 }]), 'retiro', quote.id],
+    'P0002',
+    'rechaza una compra superior al stock disponible',
+  )
+  const [emptyVariant] = await query(
+    'select id from public.variants where stock = 0 order by id limit 1',
+  )
+  ok(Boolean(emptyVariant), 'el catálogo conserva variantes agotadas por separado')
+  await expectError(
+    'select public.preview_public_order($1::jsonb, $2, $3::uuid)',
+    [JSON.stringify([{ variant_id: emptyVariant.id, quantity: 1 }]), 'retiro', quote.id],
+    'P0002',
+    'rechaza una variante con stock cero',
+  )
+
   const items = JSON.stringify([{ variant_id: variant.id, quantity: 2 }])
   const [previewRow] = await query(
     'select public.preview_public_order($1::jsonb, $2, $3::uuid) as preview',
@@ -250,6 +267,70 @@ try {
   const [stockAfter] = await query('select stock from public.variants where id = $1', [variant.id])
   ok(stockAfter.stock === variant.stock - 2, 'el stock se descuenta una sola vez')
 
+  console.log('6.1. Dos pedidos concurrentes sobre las mismas unidades')
+  const racingQuantity = stockAfter.stock
+  const raceItems = JSON.stringify([{ variant_id: variant.id, quantity: racingQuantity }])
+  const [raceQuoteRow] = await query(
+    'select public.preview_public_order($1::jsonb, $2, $3::uuid) as preview',
+    [raceItems, 'retiro', quote.id],
+  )
+  const racePreview = raceQuoteRow.preview
+  const raceArgs = [...createArgs]
+  raceArgs[8] = raceItems
+  raceArgs[9] = quote.id
+  raceArgs[10] = racePreview.subtotalCents
+  raceArgs[11] = racePreview.shippingCents
+  raceArgs[12] = racePreview.totalCents
+  raceArgs[13] = racePreview.vesTotalCents
+  raceArgs[0] = '55555555-5555-4555-8555-555555555555'
+  raceArgs[1] = createHash('sha256').update('competing-order-a').digest('hex')
+  const [raceOrderA] = await query(
+    `select public.create_public_order_v2(
+      $1::uuid, $2, $3::jsonb, $4, $5::jsonb, $6, $7, $8, $9::jsonb, $10::uuid,
+      $11::int, $12::int, $13::int, $14::bigint
+    ) as created`,
+    raceArgs,
+  )
+  raceArgs[0] = '66666666-6666-4666-8666-666666666666'
+  raceArgs[1] = createHash('sha256').update('competing-order-b').digest('hex')
+  const [raceOrderB] = await query(
+    `select public.create_public_order_v2(
+      $1::uuid, $2, $3::jsonb, $4, $5::jsonb, $6, $7, $8, $9::jsonb, $10::uuid,
+      $11::int, $12::int, $13::int, $14::bigint
+    ) as created`,
+    raceArgs,
+  )
+  ok(
+    Boolean(raceOrderA.created.id && raceOrderB.created.id),
+    'dos pedidos pueden esperar revisión por las mismas unidades',
+  )
+  await query(
+    `select public.admin_update_payment($1::uuid, 'review', 'Comprobante de prueba', $2::uuid)`,
+    [raceOrderA.created.id, adminId],
+  )
+  const [racePaidA] = await query(
+    `select public.admin_update_payment($1::uuid, 'paid', 'Prueba autorizada', $2::uuid) as result`,
+    [raceOrderA.created.id, adminId],
+  )
+  ok(
+    racePaidA.result.orderStatus === 'confirmed',
+    'el primer pago de prueba consume las unidades disponibles',
+  )
+  await query(
+    `select public.admin_update_payment($1::uuid, 'review', 'Comprobante de prueba', $2::uuid)`,
+    [raceOrderB.created.id, adminId],
+  )
+  const [racePaidB] = await query(
+    `select public.admin_update_payment($1::uuid, 'paid', 'Prueba autorizada', $2::uuid) as result`,
+    [raceOrderB.created.id, adminId],
+  )
+  ok(
+    racePaidB.result.orderStatus === 'inventory_exception',
+    'el segundo pago no puede vender las unidades ya consumidas',
+  )
+  const [noOversell] = await query('select stock from public.variants where id = $1', [variant.id])
+  ok(noOversell.stock === 0, 'la competencia nunca deja stock negativo ni lo descuenta dos veces')
+
   const [prepared] = await query(
     `select public.admin_update_fulfillment($1::uuid, 'preparing', 'Listo para despacho', $2::uuid) as result`,
     [created.id, adminId],
@@ -302,7 +383,48 @@ try {
   )
   ok(delivered.result.fulfillmentStatus === 'delivered', 'se registra la entrega')
 
-  console.log('7. RLS y permisos')
+  console.log('7. Ajustes administrativos del inventario')
+  const [beforeStock] = await query('select stock from public.variants where id = $1', [variant.id])
+  const [receivedStock] = await query(
+    `select public.admin_adjust_variant_stock($1::uuid, $2, 'add', 3, 'Recepción ficticia de prueba') as result`,
+    [adminId, variant.id],
+  )
+  ok(
+    receivedStock.result.stock === beforeStock.stock + 3 && receivedStock.result.delta === 3,
+    'el administrador puede registrar una entrada de unidades',
+  )
+  const [subtractedStock] = await query(
+    `select public.admin_adjust_variant_stock($1::uuid, $2, 'subtract', 2, 'Salida ficticia de prueba') as result`,
+    [adminId, variant.id],
+  )
+  ok(
+    subtractedStock.result.stock === beforeStock.stock + 1 && subtractedStock.result.delta === -2,
+    'el administrador puede restar unidades con un movimiento registrado',
+  )
+  const [fixedStock] = await query(
+    `select public.admin_adjust_variant_stock($1::uuid, $2, 'set', 2, 'Corrección de prueba') as result`,
+    [adminId, variant.id],
+  )
+  ok(fixedStock.result.stock === 2, 'el administrador puede fijar el total disponible')
+  await expectError(
+    `select public.admin_adjust_variant_stock($1::uuid, $2, 'subtract', 3, null)`,
+    [adminId, variant.id],
+    'P0001',
+    'rechaza una salida superior al stock sin permitir cantidades negativas',
+  )
+  await expectError(
+    `select public.admin_adjust_variant_stock('44444444-4444-4444-8444-444444444444'::uuid, $1, 'add', 1, null)`,
+    [variant.id],
+    '42501',
+    'rechaza el ajuste de inventario de un usuario sin autorización',
+  )
+  const [movementCount] = await query(
+    `select count(*)::int as count from public.inventory_movements where variant_id = $1 and note in ('Recepción ficticia de prueba', 'Salida ficticia de prueba', 'Corrección de prueba')`,
+    [variant.id],
+  )
+  ok(movementCount.count === 3, 'cada cambio manual conserva su movimiento de inventario')
+
+  console.log('8. RLS y permisos')
   const sensitive = await query(`
     select tablename, rowsecurity
     from pg_tables
@@ -330,6 +452,21 @@ try {
     'un usuario autenticado no puede crear pedidos saltándose la Edge Function',
   )
   ok(privileges.service_lookup === true, 'service_role conserva la consulta privada')
+  const [stockPrivileges] = await query(`
+    select
+      has_function_privilege('anon', 'public.admin_adjust_variant_stock(uuid,text,text,integer,text)', 'EXECUTE') as anon_stock,
+      has_function_privilege('authenticated', 'public.admin_adjust_variant_stock(uuid,text,text,integer,text)', 'EXECUTE') as auth_stock,
+      has_function_privilege('service_role', 'public.admin_adjust_variant_stock(uuid,text,text,integer,text)', 'EXECUTE') as service_stock
+  `)
+  ok(stockPrivileges.anon_stock === false, 'anon no puede modificar existencias directamente')
+  ok(
+    stockPrivileges.auth_stock === false,
+    'authenticated no puede saltarse la función administrativa',
+  )
+  ok(
+    stockPrivileges.service_stock === true,
+    'la Edge Function administrativa puede ajustar existencias',
+  )
 
   await db.exec('set role anon')
   const [publicProducts] = await query('select count(*)::int as count from public.products')

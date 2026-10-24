@@ -4,10 +4,10 @@ Tienda conceptual de ropa para pequeños comercios venezolanos. Proyecto de port
 checkout, seguimiento de pedidos, panel administrativo y backend Supabase preparado. Todos los
 productos, precios y clientes de la demo son ficticios.
 
-> **Estado real (24 oct 2026):** el frontend publicado está conectado a Supabase; las 12 migraciones
+> **Estado real (24 oct 2026):** el frontend publicado está conectado a Supabase; las 13 migraciones
 > están aplicadas y las 16 Edge Functions activas. Supabase contiene 50 productos ficticios de
 > demostración, 50 variantes con stock cero y ningún método de pago activo; no se puede crear un pedido.
-> El panel llega al inicio de sesión; las operaciones autenticadas no se han probado. WhatsApp, IA,
+> El panel llega al inicio de sesión; las operaciones autenticadas aún no se han probado desde la interfaz. WhatsApp,
 > IA, cobros externos y envíos automáticos permanecen desactivados. El botón de WhatsApp abre un chat
 > directo al número de la tienda, sin enviar mensajes automáticamente.
 
@@ -36,7 +36,7 @@ configurar métodos de pago y confirmar un alojamiento compatible con comercio e
   métodos manuales, datos de despacho, métricas y cola de atención de WhatsApp.
 - Webhook de WhatsApp Cloud API con firma HMAC, deduplicación, reintentos, estados, conversaciones y
   fallback a enlaces `wa.me`/mensaje copiable. Los envíos salientes están desactivados.
-- 197 pruebas de aplicación en 22 archivos y 37 comprobaciones de base de datos con PGlite.
+- 200 pruebas de aplicación en 23 archivos y 53 comprobaciones de base de datos con PGlite.
 
 ## Qué no incluye, ni simula
 
@@ -109,7 +109,7 @@ pedido por uno local.
 | `pnpm format:check`       | Verifica Prettier                             |
 | `pnpm test`               | Vitest                                        |
 | `pnpm check`              | Tipos, lint y pruebas                         |
-| `pnpm test:db`            | Migraciones, seed y 37 comprobaciones SQL/RLS |
+| `pnpm test:db`            | Migraciones, seed y 53 comprobaciones SQL/RLS |
 | `pnpm supabase:seed`      | Regenera `supabase/seed.sql`                  |
 | `pnpm supabase:start`     | Stack local (requiere Docker)                 |
 | `pnpm supabase:reset`     | Reaplica migraciones y seed en local          |
@@ -172,7 +172,7 @@ real.
 
 ## Backend Supabase
 
-El repositorio contiene 12 migraciones y 16 Edge Functions. Las migraciones crean pedidos, catálogo,
+El repositorio contiene 13 migraciones y 16 Edge Functions. Las migraciones crean pedidos, catálogo,
 cotizaciones, auditoría, inventario, Storage, métodos de pago, métricas, contexto de WhatsApp,
 límites de IA y referencias públicas de pago. RLS está activo en las tablas sensibles.
 
@@ -204,8 +204,8 @@ Verificado el 2026-10-22:
 
 | Comando             | Resultado                                |
 | ------------------- | ---------------------------------------- |
-| `pnpm check`        | Tipos, lint y 197 pruebas en 22 archivos |
-| `pnpm test:db`      | 37 comprobaciones SQL/RLS correctas      |
+| `pnpm check`        | Tipos, lint y 200 pruebas en 23 archivos |
+| `pnpm test:db`      | 53 comprobaciones SQL/RLS correctas      |
 | `pnpm format:check` | Correcto                                 |
 | `pnpm build`        | Correcto; genera `dist/`                 |
 
@@ -273,7 +273,7 @@ norte-moda/
 │  └─ lib/                   # Supabase, WhatsApp, rutas y colores
 ├─ supabase/
 │  ├─ functions/             # 16 Edge Functions
-│  ├─ migrations/            # 12 migraciones SQL
+│  ├─ migrations/            # 13 migraciones SQL
 │  ├─ config.toml
 │  └─ seed.sql
 └─ package.json

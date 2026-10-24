@@ -9,7 +9,7 @@ en `README.md` y `docs/IMPLEMENTACION_BACKEND.md`.
 - Frontend público: <https://reinaldogocode.github.io/ProyectOne/>
 - Panel administrativo: <https://reinaldogocode.github.io/ProyectOne/admin>
 - Repositorio: <https://github.com/ReinaldoGoCode/ProyectOne>
-- Supabase Cloud: proyecto `ctnpisuizfhxcuxrjhah`; 12 migraciones aplicadas y 16 Edge Functions activas.
+- Supabase Cloud: proyecto `ctnpisuizfhxcuxrjhah`; 13 migraciones aplicadas y 16 Edge Functions activas.
 - GitHub Pages: publicación automática desde `main`; Vite usa `/ProyectOne/` como ruta base.
 - Cloudflare Pages: no forma parte del flujo automático actual.
 - Base de datos: 6 categorías y 50 productos ficticios `DEMO`, con 50 variantes en stock cero; 0 pedidos.
@@ -53,7 +53,7 @@ corepack pnpm exec supabase db push --project-ref <PROJECT_REF> --dry-run
 corepack pnpm exec supabase db push --project-ref <PROJECT_REF> --include-all
 ```
 
-La ejecución debe aplicar las **12 migraciones**. No uses `--include-seed` en producción: el seed es
+La ejecución debe aplicar las **13 migraciones**. No uses `--include-seed` en producción: el seed es
 catálogo ficticio. Para una base de staging/demostración puedes usar el SQL Editor con
 `supabase/seed.sql`, nunca sobre datos reales.
 
@@ -112,7 +112,17 @@ on conflict (user_id) do update set active = true;
 La tabla permite **un solo administrador activo**. El panel `/admin` no tiene credenciales
 predeterminadas.
 
-### 1.6 Probar sin WhatsApp
+### 1.6 Administrar productos y existencias
+
+En `/admin`, abre **Catálogo e inventario remoto**. Busca por nombre y filtra categoría o
+disponibilidad. **Crear producto** crea el producto y su primera variante con stock inicial explícito;
+**Editar** permite cambiar los datos y retirar temporalmente el producto desmarcando su publicación.
+Para cada variante, elige **Añadir**, **Restar** o **Fijar total**, introduce un entero y guarda. La
+operación requiere sesión de administrador, se valida otra vez en PostgreSQL bajo bloqueo de fila y
+queda en el historial de movimientos. No uses stock ficticio para representar unidades reales.
+Las variantes adicionales se importan por SKU con la plantilla CSV.
+
+### 1.7 Probar sin WhatsApp
 
 Antes de activar mensajes:
 
@@ -240,10 +250,12 @@ una persona. No se debe habilitar un plan de pago ni un proveedor de respaldo si
 ## 5. Checklist de aceptación
 
 - [ ] `pnpm check`, `pnpm test:db`, `pnpm format:check` y `pnpm build` pasan en el commit desplegado.
-- [ ] Las 12 migraciones están aplicadas en Supabase Cloud.
+- [ ] Las 13 migraciones están aplicadas en Supabase Cloud.
 - [ ] Las 16 Edge Functions están desplegadas.
 - [ ] RLS impide que `anon` lea pedidos y que un cliente apruebe pagos.
 - [ ] Existe un solo administrador activo y `/admin` exige Supabase Auth.
+- [ ] Un administrador puede crear/editar/despublicar productos y ajustar cada variante; un usuario sin permisos no puede hacerlo.
+- [ ] Una salida mayor que el stock se rechaza y cada ajuste queda registrado como movimiento.
 - [ ] Un pedido de prueba se crea en PostgreSQL, se consulta con su token y aparece en el panel.
 - [ ] Una referencia de pago queda en revisión y solo un administrador la aprueba.
 - [ ] Empresa, guía y observaciones de envío se guardan y el comprador las ve.

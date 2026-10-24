@@ -7,7 +7,54 @@ import {
   planInventoryCsv,
 } from '@/data/inventoryCsv'
 import type { Catalog, InventoryMovement } from '@/domain/types'
-import type { RemoteInventoryImportResult } from '@/data/repositories/remoteOrderGateway'
+import { slugify } from '@/lib/text'
+import type {
+  RemoteInventoryImportResult,
+  RemoteStockAdjustmentMode,
+} from '@/data/repositories/remoteOrderGateway'
+
+const SIZE_OPTIONS = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'Único'] as const
+type StockFilter = 'all' | 'available' | 'low' | 'out'
+interface ProductForm {
+  id: string
+  name: string
+  categoryId: string
+  description: string
+  composition: string
+  care: string
+  price: string
+  imageUrl: string
+  imageAlt: string
+  active: boolean
+  sku: string
+  size: (typeof SIZE_OPTIONS)[number]
+  color: string
+  initialStock: string
+}
+interface StockInput {
+  mode: RemoteStockAdjustmentMode
+  quantity: string
+  note: string
+}
+
+function emptyProductForm(categoryId: string, imageUrl: string): ProductForm {
+  return {
+    id: '',
+    name: '',
+    categoryId,
+    description: '',
+    composition: 'Demostración',
+    care: 'Datos de muestra',
+    price: '24.00',
+    imageUrl,
+    imageAlt: '',
+    active: true,
+    sku: '',
+    size: 'Único',
+    color: 'Muestra',
+    initialStock: '0',
+  }
+}
 
 const REASON_LABELS: Readonly<Record<InventoryMovement['reason'], string>> = {
   receipt: 'Entrada',
@@ -29,6 +76,7 @@ export function RemoteInventoryPanel({
   catalog,
   movements,
   onImport,
+  onStockAdjust,
   onImageUpload,
 }: {
   readonly catalog: Catalog
@@ -37,6 +85,12 @@ export function RemoteInventoryPanel({
     catalog: Catalog,
     expectedCatalog: Catalog,
   ) => Promise<RemoteInventoryImportResult>
+  readonly onStockAdjust: (
+    variantId: string,
+    mode: RemoteStockAdjustmentMode,
+    quantity: number,
+    note: string,
+  ) => Promise<{ readonly stock: number; readonly delta: number }>
   readonly onImageUpload: (productId: string, file: File) => Promise<void>
 }) {
   const [csvText, setCsvText] = useState('')
@@ -48,6 +102,18 @@ export function RemoteInventoryPanel({
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
+  const [productSearch, setProductSearch] = useState('')
+  const [categoryFilter, setCategoryFilter] = useState('all')
+  const [stockFilter, setStockFilter] = useState<StockFilter>('all')
+  const [productForm, setProductForm] = useState<ProductForm>(() =>
+    emptyProductForm(
+      catalog.categories[0]?.id ?? '',
+      catalog.products[0]?.imageUrl ?? '/images/products/placeholder.svg',
+    ),
+  )
+  const [productFormOpen, setProductFormOpen] = useState(false)
+  const [stockInputs, setStockInputs] = useState<Record<string, StockInput>>({})
+  const [busyVariantId, setBusyVariantId] = useState<string | null>(null)
   const threshold = Number(thresholdText)
   const lowStock = catalog.variants
     .filter((variant) => variant.stock <= (Number.isSafeInteger(threshold) ? threshold : 3))
@@ -59,6 +125,156 @@ export function RemoteInventoryPanel({
     .sort((a, b) => a.variant.stock - b.variant.stock)
   const selectedImageProduct =
     catalog.products.find((product) => product.id === imageProductId) ?? catalog.products[0]
+  const filteredProducts = catalog.products.filter((product) => {
+    const matchesSearch = `${product.name} ${product.id}`
+      .toLocaleLowerCase('es')
+      .includes(productSearch.trim().toLocaleLowerCase('es'))
+    const matchesCategory = categoryFilter === 'all' || product.categoryId === categoryFilter
+    const variants = catalog.variants.filter((variant) => variant.productId === product.id)
+    const available = variants.some((variant) => variant.stock > 0)
+    const low = variants.some((variant) => variant.stock > 0 && variant.stock <= threshold)
+    const matchesStock =
+      stockFilter === 'all' ||
+      (stockFilter === 'available' && available) ||
+      (stockFilter === 'low' && low) ||
+      (stockFilter === 'out' && !available)
+    return matchesSearch && matchesCategory && matchesStock
+  })
+
+  function startCreateProduct(): void {
+    setProductForm(
+      emptyProductForm(
+        catalog.categories[0]?.id ?? '',
+        catalog.products[0]?.imageUrl ?? '/images/products/placeholder.svg',
+      ),
+    )
+    setProductFormOpen(true)
+    setError('')
+    setNotice('')
+  }
+
+  function startEditProduct(productId: string): void {
+    const product = catalog.products.find((item) => item.id === productId)
+    if (!product) return
+    setProductForm({
+      id: product.id,
+      name: product.name,
+      categoryId: product.categoryId,
+      description: product.description,
+      composition: product.composition,
+      care: product.care,
+      price: (product.priceCents / 100).toFixed(2),
+      imageUrl: product.imageUrl,
+      imageAlt: product.imageAlt,
+      active: product.active,
+      sku: '',
+      size: 'Único',
+      color: 'Muestra',
+      initialStock: '0',
+    })
+    setProductFormOpen(true)
+    setError('')
+    setNotice('')
+  }
+
+  async function saveProduct(): Promise<void> {
+    if (busy) return
+    const name = productForm.name.trim()
+    const slug = productForm.id || slugify(name)
+    const price = Number(productForm.price.replace(',', '.'))
+    const initialStock = Number(productForm.initialStock)
+    if (!name || !slug || !productForm.categoryId || !Number.isFinite(price) || price <= 0) {
+      setError('Completa nombre, categoría y un precio mayor que cero.')
+      return
+    }
+    if (!productForm.id && catalog.products.some((product) => product.id === slug)) {
+      setError('Ya existe un producto con ese nombre o identificador.')
+      return
+    }
+    if (
+      !productForm.id &&
+      (!productForm.sku.trim() ||
+        !productForm.color.trim() ||
+        !Number.isSafeInteger(initialStock) ||
+        initialStock < 0)
+    ) {
+      setError('Completa SKU, color y existencias iniciales válidas para la variante.')
+      return
+    }
+    const product = {
+      id: slug,
+      slug,
+      name,
+      categoryId: productForm.categoryId,
+      description: productForm.description.trim(),
+      composition: productForm.composition.trim(),
+      care: productForm.care.trim(),
+      priceCents: Math.round(price * 100),
+      imageUrl: productForm.imageUrl.trim(),
+      imageAlt: productForm.imageAlt.trim() || name,
+      active: productForm.active,
+      createdAt:
+        catalog.products.find((item) => item.id === slug)?.createdAt ?? new Date().toISOString(),
+    }
+    if (!product.imageUrl) {
+      setError('Indica una URL de imagen o usa la imagen de muestra preseleccionada.')
+      return
+    }
+    const variants = productForm.id
+      ? catalog.variants
+      : [
+          ...catalog.variants,
+          {
+            id: slugify(`${slug}-${productForm.size}-${productForm.color}`),
+            productId: slug,
+            size: productForm.size,
+            color: productForm.color.trim(),
+            sku: productForm.sku.trim().toUpperCase(),
+            stock: initialStock,
+          },
+        ]
+    setError('')
+    setNotice('')
+    setBusy(true)
+    try {
+      const nextCatalog = {
+        ...catalog,
+        products: productForm.id
+          ? catalog.products.map((item) => (item.id === slug ? product : item))
+          : [...catalog.products, product],
+        variants,
+      }
+      await onImport(nextCatalog, catalog)
+      setProductFormOpen(false)
+      setNotice(
+        productForm.id ? 'Producto actualizado en Supabase.' : 'Producto creado en Supabase.',
+      )
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'No se pudo guardar el producto.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function saveStock(variantId: string): Promise<void> {
+    const input = stockInputs[variantId] ?? { mode: 'add' as const, quantity: '1', note: '' }
+    const quantity = Number(input.quantity)
+    if (!Number.isSafeInteger(quantity) || quantity < 0) {
+      setError('La cantidad de existencias debe ser un entero igual o mayor que cero.')
+      return
+    }
+    setError('')
+    setNotice('')
+    setBusyVariantId(variantId)
+    try {
+      const result = await onStockAdjust(variantId, input.mode, quantity, input.note)
+      setNotice(`Existencias guardadas. Nuevo total: ${String(result.stock)}.`)
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'No se pudo guardar el inventario.')
+    } finally {
+      setBusyVariantId(null)
+    }
+  }
 
   async function saveImage(): Promise<void> {
     if (!selectedImageProduct || !imageFile || imageBusy) return
@@ -145,6 +361,413 @@ export function RemoteInventoryPanel({
             Exportar catálogo
           </button>
         </div>
+      </div>
+
+      <div className="mt-6 rounded-2xl bg-paper/80 p-4 sm:p-5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h3 className="font-medium">Administrar productos y variantes</h3>
+            <p className="mt-1 text-xs text-stone-600">
+              Stock por talla y color. Los productos se desactivan para retirarlos de la tienda sin
+              borrar su historial.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={startCreateProduct}
+            className={buttonClassName('primary', 'py-2')}
+          >
+            Crear producto
+          </button>
+        </div>
+
+        {productFormOpen ? (
+          <form
+            className="mt-4 grid gap-3 rounded-xl bg-white p-4 sm:grid-cols-2"
+            onSubmit={(event) => {
+              event.preventDefault()
+              void saveProduct()
+            }}
+          >
+            <label className="text-xs font-medium text-stone-600">
+              Nombre
+              <input
+                required
+                maxLength={180}
+                value={productForm.name}
+                onChange={(event) => {
+                  setProductForm({ ...productForm, name: event.currentTarget.value })
+                }}
+                className="mt-1.5 min-h-10 w-full rounded-lg px-3 text-sm ring-1 ring-stone-900/15"
+              />
+            </label>
+            <label className="text-xs font-medium text-stone-600">
+              Categoría
+              <select
+                required
+                value={productForm.categoryId}
+                onChange={(event) => {
+                  setProductForm({ ...productForm, categoryId: event.currentTarget.value })
+                }}
+                className="mt-1.5 min-h-10 w-full rounded-lg bg-white px-3 text-sm ring-1 ring-stone-900/15"
+              >
+                {catalog.categories.map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="text-xs font-medium text-stone-600">
+              Precio en USD
+              <input
+                required
+                type="number"
+                min="0.01"
+                step="0.01"
+                value={productForm.price}
+                onChange={(event) => {
+                  setProductForm({ ...productForm, price: event.currentTarget.value })
+                }}
+                className="mt-1.5 min-h-10 w-full rounded-lg px-3 text-sm ring-1 ring-stone-900/15"
+              />
+            </label>
+            <label className="text-xs font-medium text-stone-600">
+              URL de imagen
+              <input
+                required
+                value={productForm.imageUrl}
+                onChange={(event) => {
+                  setProductForm({ ...productForm, imageUrl: event.currentTarget.value })
+                }}
+                className="mt-1.5 min-h-10 w-full rounded-lg px-3 text-sm ring-1 ring-stone-900/15"
+              />
+            </label>
+            <label className="text-xs font-medium text-stone-600 sm:col-span-2">
+              Descripción
+              <textarea
+                maxLength={5000}
+                rows={2}
+                value={productForm.description}
+                onChange={(event) => {
+                  setProductForm({ ...productForm, description: event.currentTarget.value })
+                }}
+                className="mt-1.5 w-full rounded-lg px-3 py-2 text-sm ring-1 ring-stone-900/15"
+              />
+            </label>
+            <label className="text-xs font-medium text-stone-600">
+              Composición
+              <input
+                maxLength={500}
+                value={productForm.composition}
+                onChange={(event) => {
+                  setProductForm({ ...productForm, composition: event.currentTarget.value })
+                }}
+                className="mt-1.5 min-h-10 w-full rounded-lg px-3 text-sm ring-1 ring-stone-900/15"
+              />
+            </label>
+            <label className="text-xs font-medium text-stone-600">
+              Cuidados
+              <input
+                maxLength={1000}
+                value={productForm.care}
+                onChange={(event) => {
+                  setProductForm({ ...productForm, care: event.currentTarget.value })
+                }}
+                className="mt-1.5 min-h-10 w-full rounded-lg px-3 text-sm ring-1 ring-stone-900/15"
+              />
+            </label>
+            {!productForm.id ? (
+              <>
+                <p className="text-xs font-medium text-stone-500 sm:col-span-2">
+                  Primera variante (puedes añadir más después con el CSV):
+                </p>
+                <label className="text-xs font-medium text-stone-600">
+                  SKU
+                  <input
+                    required
+                    maxLength={100}
+                    value={productForm.sku}
+                    onChange={(event) => {
+                      setProductForm({ ...productForm, sku: event.currentTarget.value })
+                    }}
+                    className="mt-1.5 min-h-10 w-full rounded-lg px-3 text-sm ring-1 ring-stone-900/15"
+                  />
+                </label>
+                <label className="text-xs font-medium text-stone-600">
+                  Talla
+                  <select
+                    value={productForm.size}
+                    onChange={(event) => {
+                      setProductForm({
+                        ...productForm,
+                        size: event.currentTarget.value as ProductForm['size'],
+                      })
+                    }}
+                    className="mt-1.5 min-h-10 w-full rounded-lg bg-white px-3 text-sm ring-1 ring-stone-900/15"
+                  >
+                    {SIZE_OPTIONS.map((size) => (
+                      <option key={size}>{size}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="text-xs font-medium text-stone-600">
+                  Color
+                  <input
+                    required
+                    maxLength={80}
+                    value={productForm.color}
+                    onChange={(event) => {
+                      setProductForm({ ...productForm, color: event.currentTarget.value })
+                    }}
+                    className="mt-1.5 min-h-10 w-full rounded-lg px-3 text-sm ring-1 ring-stone-900/15"
+                  />
+                </label>
+                <label className="text-xs font-medium text-stone-600">
+                  Existencias iniciales
+                  <input
+                    required
+                    type="number"
+                    min="0"
+                    max="999999999"
+                    step="1"
+                    value={productForm.initialStock}
+                    onChange={(event) => {
+                      setProductForm({ ...productForm, initialStock: event.currentTarget.value })
+                    }}
+                    className="mt-1.5 min-h-10 w-full rounded-lg px-3 text-sm ring-1 ring-stone-900/15"
+                  />
+                </label>
+              </>
+            ) : null}
+            <label className="flex items-center gap-2 text-sm sm:col-span-2">
+              <input
+                type="checkbox"
+                checked={productForm.active}
+                onChange={(event) => {
+                  setProductForm({ ...productForm, active: event.currentTarget.checked })
+                }}
+              />
+              Publicado en la tienda (desmarca para retirarlo sin borrar su historial)
+            </label>
+            <div className="flex flex-wrap gap-2 sm:col-span-2">
+              <button
+                disabled={busy || catalog.categories.length === 0}
+                className={buttonClassName('primary', 'py-2 disabled:opacity-45')}
+                type="submit"
+              >
+                {busy ? 'Guardando…' : 'Guardar producto'}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setProductFormOpen(false)
+                }}
+                className={buttonClassName('secondary', 'py-2')}
+              >
+                Cancelar
+              </button>
+            </div>
+          </form>
+        ) : null}
+
+        <div className="mt-4 grid gap-2 md:grid-cols-3">
+          <input
+            aria-label="Buscar producto"
+            placeholder="Buscar por nombre"
+            value={productSearch}
+            onChange={(event) => {
+              setProductSearch(event.currentTarget.value)
+            }}
+            className="min-h-10 rounded-lg bg-white px-3 text-sm ring-1 ring-stone-900/12"
+          />
+          <select
+            aria-label="Filtrar categoría"
+            value={categoryFilter}
+            onChange={(event) => {
+              setCategoryFilter(event.currentTarget.value)
+            }}
+            className="min-h-10 rounded-lg bg-white px-3 text-sm ring-1 ring-stone-900/12"
+          >
+            <option value="all">Todas las categorías</option>
+            {catalog.categories.map((category) => (
+              <option key={category.id} value={category.id}>
+                {category.name}
+              </option>
+            ))}
+          </select>
+          <select
+            aria-label="Filtrar disponibilidad"
+            value={stockFilter}
+            onChange={(event) => {
+              setStockFilter(event.currentTarget.value as StockFilter)
+            }}
+            className="min-h-10 rounded-lg bg-white px-3 text-sm ring-1 ring-stone-900/12"
+          >
+            <option value="all">Cualquier existencia</option>
+            <option value="available">Con stock</option>
+            <option value="low">Stock bajo</option>
+            <option value="out">Agotados</option>
+          </select>
+        </div>
+
+        <div className="mt-3 overflow-x-auto rounded-xl bg-white ring-1 ring-stone-900/10">
+          <table className="w-full min-w-[48rem] text-left text-sm">
+            <thead className="bg-stone-50 text-xs text-stone-600">
+              <tr>
+                <th className="p-3">Producto / variante</th>
+                <th className="p-3">Publicación</th>
+                <th className="p-3">Existencias</th>
+                <th className="p-3">Movimiento</th>
+                <th className="p-3"></th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-stone-900/8">
+              {filteredProducts.map((product) => {
+                const variants = catalog.variants.filter(
+                  (variant) => variant.productId === product.id,
+                )
+                return variants.length ? (
+                  variants.map((variant) => {
+                    const input = stockInputs[variant.id] ?? {
+                      mode: 'add' as const,
+                      quantity: '1',
+                      note: '',
+                    }
+                    return (
+                      <tr key={variant.id}>
+                        <td className="p-3">
+                          <strong className="block">{product.name}</strong>
+                          <span className="text-xs text-stone-500">
+                            {variant.size} · {variant.color} · SKU {variant.sku}
+                          </span>
+                        </td>
+                        <td className="p-3">{product.active ? 'Publicado' : 'Oculto'}</td>
+                        <td className="p-3 font-semibold tabular-nums">
+                          {variant.stock}
+                          {variant.stock === 0 ? (
+                            <span className="ml-2 text-xs text-red-800">Agotado</span>
+                          ) : variant.stock <= threshold ? (
+                            <span className="ml-2 text-xs text-amber-800">Stock bajo</span>
+                          ) : null}
+                        </td>
+                        <td className="p-3">
+                          <div className="flex flex-wrap gap-1.5">
+                            <select
+                              aria-label={`Operación de stock ${variant.sku}`}
+                              value={input.mode}
+                              onChange={(event) => {
+                                setStockInputs({
+                                  ...stockInputs,
+                                  [variant.id]: {
+                                    ...input,
+                                    mode: event.currentTarget.value as RemoteStockAdjustmentMode,
+                                  },
+                                })
+                              }}
+                              className="min-h-9 rounded-md bg-white px-2 text-xs ring-1 ring-stone-900/15"
+                            >
+                              <option value="add">Añadir</option>
+                              <option value="subtract">Restar</option>
+                              <option value="set">Fijar total</option>
+                            </select>
+                            <input
+                              aria-label={`Cantidad para ${variant.sku}`}
+                              type="number"
+                              min="0"
+                              max="999999999"
+                              step="1"
+                              value={input.quantity}
+                              onChange={(event) => {
+                                setStockInputs({
+                                  ...stockInputs,
+                                  [variant.id]: { ...input, quantity: event.currentTarget.value },
+                                })
+                              }}
+                              className="min-h-9 w-20 rounded-md px-2 text-sm ring-1 ring-stone-900/15"
+                            />
+                            <input
+                              aria-label={`Nota para ${variant.sku}`}
+                              maxLength={300}
+                              placeholder="Nota (opcional)"
+                              value={input.note}
+                              onChange={(event) => {
+                                setStockInputs({
+                                  ...stockInputs,
+                                  [variant.id]: { ...input, note: event.currentTarget.value },
+                                })
+                              }}
+                              className="min-h-9 w-32 rounded-md px-2 text-xs ring-1 ring-stone-900/15"
+                            />
+                          </div>
+                        </td>
+                        <td className="p-3">
+                          <div className="flex gap-2">
+                            <button
+                              type="button"
+                              disabled={busyVariantId === variant.id}
+                              onClick={() => void saveStock(variant.id)}
+                              className={buttonClassName('secondary', 'py-1.5 disabled:opacity-45')}
+                            >
+                              {busyVariantId === variant.id ? '…' : 'Guardar stock'}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                startEditProduct(product.id)
+                              }}
+                              className={buttonClassName('secondary', 'py-1.5')}
+                            >
+                              Editar
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })
+                ) : (
+                  <tr key={product.id}>
+                    <td className="p-3">
+                      <strong>{product.name}</strong>
+                      <span className="ml-2 text-xs text-red-800">Sin variantes</span>
+                    </td>
+                    <td className="p-3">{product.active ? 'Publicado' : 'Oculto'}</td>
+                    <td className="p-3">—</td>
+                    <td className="p-3">Añade una variante desde la importación CSV.</td>
+                    <td className="p-3">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          startEditProduct(product.id)
+                        }}
+                        className={buttonClassName('secondary', 'py-1.5')}
+                      >
+                        Editar
+                      </button>
+                    </td>
+                  </tr>
+                )
+              })}
+              {filteredProducts.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="p-5 text-center text-sm text-stone-500">
+                    No hay productos que coincidan con estos filtros.
+                  </td>
+                </tr>
+              ) : null}
+            </tbody>
+          </table>
+        </div>
+        {error ? (
+          <p role="alert" className="mt-3 text-sm text-red-800">
+            {error}
+          </p>
+        ) : null}
+        {notice ? (
+          <p aria-live="polite" className="mt-3 text-sm text-emerald-800">
+            {notice}
+          </p>
+        ) : null}
       </div>
 
       <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(17rem,0.75fr)]">
@@ -274,16 +897,6 @@ export function RemoteInventoryPanel({
                 afectadas. Aún no se ha guardado.
               </div>
             )
-          ) : null}
-          {error ? (
-            <p role="alert" className="mt-3 text-sm text-red-800">
-              {error}
-            </p>
-          ) : null}
-          {notice ? (
-            <p aria-live="polite" className="mt-3 text-sm text-emerald-800">
-              {notice}
-            </p>
           ) : null}
           <p className="mt-3 text-xs leading-relaxed text-stone-500">
             <code>stock_delta</code> suma o descuenta existencias; <code>stock_on_hand</code> fija

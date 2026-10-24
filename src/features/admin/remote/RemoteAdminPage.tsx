@@ -6,6 +6,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { buttonClassName } from '@/components/ui/button'
 import { useCatalog } from '@/app/providers/catalogContext'
 import {
+  adjustRemoteVariantStock,
   applyRemoteInventoryImport,
   listRemoteAdminCatalog,
   listRemoteAdminPaymentMethods,
@@ -23,6 +24,7 @@ import type {
   RemoteAdminDashboardSummary,
   RemoteAdminPaymentMethod,
   RemoteWhatsAppHandoff,
+  RemoteStockAdjustmentMode,
 } from '@/data/repositories/remoteOrderGateway'
 import type { Catalog } from '@/domain/types'
 import { DELIVERY_METHOD_LABELS } from '@/domain/labels'
@@ -362,6 +364,19 @@ export function RemoteAdminPage() {
         'La importación se guardó, pero no se pudo actualizar la vista. Pulsa “Actualizar datos”.',
       )
     }
+    return result
+  }
+
+  async function adjustInventoryStock(
+    variantId: string,
+    mode: RemoteStockAdjustmentMode,
+    quantity: number,
+    note: string,
+  ) {
+    const result = await adjustRemoteVariantStock(variantId, mode, quantity, note)
+    setAdminCatalog(await listRemoteAdminCatalog())
+    await refreshCatalog()
+    setDashboardRefreshKey((key) => key + 1)
     return result
   }
 
@@ -741,6 +756,7 @@ export function RemoteAdminPage() {
               catalog={adminCatalog.catalog}
               movements={adminCatalog.movements}
               onImport={applyCatalogImport}
+              onStockAdjust={adjustInventoryStock}
               onImageUpload={uploadProductImage}
             />
           ) : (

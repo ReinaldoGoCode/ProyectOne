@@ -60,6 +60,44 @@ Deno.serve(async (request) => {
     } catch {
       return json(request, 400, { error: 'El cuerpo no es un JSON válido.' })
     }
+    if (isRecord(body) && body.action === 'stock') {
+      if (
+        typeof body.variantId !== 'string' ||
+        !['set', 'add', 'subtract'].includes(String(body.mode)) ||
+        !Number.isSafeInteger(body.quantity) ||
+        Number(body.quantity) < 0 ||
+        Number(body.quantity) > 999999999 ||
+        (body.note !== undefined && (typeof body.note !== 'string' || body.note.length > 300))
+      ) {
+        return json(request, 400, { error: 'El ajuste de existencias no es válido.' })
+      }
+      const { data, error } = await admin.service.rpc('admin_adjust_variant_stock', {
+        p_actor_user_id: admin.userId,
+        p_variant_id: body.variantId,
+        p_mode: body.mode,
+        p_quantity: body.quantity,
+        p_note: body.note ?? null,
+      })
+      if (error) {
+        if (error.code === 'P0001') {
+          return json(request, 409, { error: 'La salida supera las existencias disponibles.' })
+        }
+        if (error.code === 'P0002') {
+          return json(request, 404, { error: 'No se encontró esa variante.' })
+        }
+        if (error.code === '22023') {
+          return json(request, 400, { error: 'El servidor rechazó el ajuste de existencias.' })
+        }
+        if (error.code === '42501') {
+          return json(request, 403, {
+            error: 'La sesión no tiene permisos para ajustar existencias.',
+          })
+        }
+        console.error('admin-catalog stock adjustment failed', { code: error.code })
+        return json(request, 503, { error: 'No se pudieron guardar las existencias.' })
+      }
+      return json(request, 200, { result: data })
+    }
     if (!isRecord(body) || !Array.isArray(body.products) || !Array.isArray(body.variants)) {
       return json(request, 400, { error: 'La importación no tiene un formato válido.' })
     }

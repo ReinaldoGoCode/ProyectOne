@@ -699,6 +699,47 @@ export async function applyRemoteInventoryImport(
   }
 }
 
+export type RemoteStockAdjustmentMode = 'set' | 'add' | 'subtract'
+
+export async function adjustRemoteVariantStock(
+  variantId: string,
+  mode: RemoteStockAdjustmentMode,
+  quantity: number,
+  note: string,
+): Promise<{ readonly stock: number; readonly delta: number }> {
+  const client = getSupabaseBrowserClient()
+  if (!client) throw new Error('Supabase todavía no está configurado.')
+  const response = await client.functions.invoke<unknown>('admin-catalog', {
+    body: { action: 'stock', variantId, mode, quantity, note },
+  })
+  if (response.error) {
+    const context: unknown = Object.getOwnPropertyDescriptor(response.error, 'context')?.value
+    if (context instanceof Response) {
+      const failure: unknown = await context
+        .clone()
+        .json()
+        .catch(() => null)
+      if (isRecord(failure) && typeof failure['error'] === 'string') {
+        throw new Error(failure['error'])
+      }
+    }
+    throw new Error('No se pudieron guardar las existencias.')
+  }
+  const payload: unknown = response.data
+  if (
+    !isRecord(payload) ||
+    !isRecord(payload['result']) ||
+    !Number.isSafeInteger(payload['result']['stock']) ||
+    !Number.isSafeInteger(payload['result']['delta'])
+  ) {
+    throw new Error('El servidor devolvió un ajuste de existencias inválido.')
+  }
+  return {
+    stock: payload['result']['stock'] as number,
+    delta: payload['result']['delta'] as number,
+  }
+}
+
 export async function uploadRemoteProductImage(
   productId: string,
   file: File,
