@@ -12,9 +12,9 @@ en `README.md` y `docs/IMPLEMENTACION_BACKEND.md`.
 - Supabase Cloud: proyecto `ctnpisuizfhxcuxrjhah`; 12 migraciones aplicadas y 16 Edge Functions activas.
 - GitHub Pages: publicación automática desde `main`; Vite usa `/ProyectOne/` como ruta base.
 - Cloudflare Pages: no forma parte del flujo automático actual.
-- Base de datos: no hay categorías, productos, variantes ni pedidos. No se cargó el catálogo ficticio.
+- Base de datos: 6 categorías y 50 productos ficticios `DEMO`, con 50 variantes en stock cero; 0 pedidos.
 - Métodos de pago: ninguno habilitado; WhatsApp y la IA permanecen apagados.
-- WhatsApp/Meta: **sin app, WABA, número ni tokens**.
+- WhatsApp: enlace público `wa.me` y número para el contexto seguro configurados; faltan app/WABA/tokens para la API automática de Meta.
 - IA: **apagada**; no hay clave ni autorización para consumir créditos.
 
 GitHub Pages sirve el frontend estático y Supabase el backend. La tienda no puede aceptar pedidos

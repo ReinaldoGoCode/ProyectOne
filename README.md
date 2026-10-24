@@ -5,10 +5,11 @@ checkout, seguimiento de pedidos, panel administrativo y backend Supabase prepar
 productos, precios y clientes de la demo son ficticios.
 
 > **Estado real (24 oct 2026):** el frontend publicado está conectado a Supabase; las 12 migraciones
-> están aplicadas y las 16 Edge Functions activas. El backend remoto responde, pero sus tablas de
-> catálogo están vacías y no hay métodos de pago habilitados, por lo que no se puede crear un pedido.
+> están aplicadas y las 16 Edge Functions activas. Supabase contiene 50 productos ficticios de
+> demostración, 50 variantes con stock cero y ningún método de pago activo; no se puede crear un pedido.
 > El panel llega al inicio de sesión; las operaciones autenticadas no se han probado. WhatsApp, IA,
-> cobros externos y envíos reales permanecen desactivados.
+> IA, cobros externos y envíos automáticos permanecen desactivados. El botón de WhatsApp abre un chat
+> directo al número de la tienda, sin enviar mensajes automáticamente.
 
 **Web publicada:** <https://reinaldogocode.github.io/ProyectOne/>
 La publicación se actualiza desde `main` mediante GitHub Actions. GitHub Pages sirve el frontend
@@ -41,8 +42,8 @@ configurar métodos de pago y confirmar un alojamiento compatible con comercio e
 
 - Pagos reales, conciliación bancaria automática ni aprobación de pagos por afirmación del cliente.
 - Integraciones con MRW, ZOOM ni otras agencias. El despacho se registra a mano.
-- WhatsApp conectado a un número real ni envío de mensajes mientras no existan credenciales y
-  autorización expresa.
+- El envío automático por WhatsApp Business API. El enlace directo de chat `wa.me` usa el número
+  público que proporcionó la dueña; el bot y los mensajes salientes continúan desactivados.
 - Tasa BCV automática. La tasa de 40 Bs./USD es ficticia y está marcada como tal.
 - Cuentas de cliente, cupones, facturación ni datos de personas reales.
 
