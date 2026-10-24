@@ -169,10 +169,9 @@ existan, el siguiente push publica automáticamente. Deben ser secretos del repo
 comprobación no tiene asociado el entorno `cloudflare-pages`, así que no ve secretos definidos solo
 para ese entorno.
 
-El build de GitHub Pages es deliberadamente solo una demo: `.github/workflows/deploy.yml` fija la base
-`/ProyectOne/` y no recibe variables `VITE_SUPABASE_*` ni el número de WhatsApp. Las variables
-públicas indicadas aquí solo se pasan al build de Cloudflare; no añadas las variables de tienda al
-workflow de GitHub Pages.
+El build de GitHub Pages publica la tienda conectada a Supabase: `.github/workflows/deploy.yml` fija la
+base `/ProyectOne/` e incorpora solamente la URL y la clave publishable públicas. Las claves de servidor
+no se añaden al frontend. El número de WhatsApp queda vacío hasta configurar el canal comercial.
 
 ### 2.4 Verificar y añadir dominio
 

@@ -49,8 +49,11 @@ jobs:
         run: pnpm build
         env:
           VITE_BASE_PATH: /ProyectOne/
-          # GitHub Pages aloja solo la demo de portafolio. No inyectar variables
-          # de la tienda conectada; la publicación remota va por Cloudflare.
+          # La clave publishable es pública y se usa solo desde el navegador.
+          # Las claves secretas del backend nunca entran en este build.
+          VITE_SUPABASE_URL: https://ctnpisuizfhxcuxrjhah.supabase.co
+          VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_AJYvJHSmKJ8_RYymY1IR1Q_-_UJh1d2
+          VITE_STORE_WHATSAPP_NUMBER: ''
 
       - name: Copiar index.html como 404 para las rutas del cliente
         run: cp dist/index.html dist/404.html

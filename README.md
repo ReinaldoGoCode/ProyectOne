@@ -213,7 +213,8 @@ ni una prueba E2E en navegador real.
 ## Despliegue
 
 - `deploy.yml`: en cada push a `main` instala dependencias, verifica tipos, lint, pruebas, SQL y
-  formato, construye y publica en GitHub Pages como demo local sin Supabase.
+  formato, construye y publica en GitHub Pages conectado al proyecto Supabase público. Solo incluye
+  la URL y la clave publishable; las claves de servidor nunca se incorporan al frontend.
 - `deploy-cloudflare.yml`: en cada push a `main` comprueba los secretos y publica en Cloudflare
   Pages cuando existen `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` y el proyecto `norte-moda`;
   sus variables públicas de Supabase se incorporan únicamente a ese build. Sin los secretos, se
