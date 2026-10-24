@@ -163,11 +163,10 @@ En GitHub → Settings → Secrets and variables → Actions:
 - `VITE_SUPABASE_PUBLISHABLE_KEY` (clave publicable/anon, nunca service role)
 - `VITE_STORE_WHATSAPP_NUMBER` (opcional; dígitos internacionales sin `+`)
 
-El workflow se ejecuta en cada push a `main`. Si faltan los dos secretos, la comprobación previa
-termina correctamente y el job de publicación se omite; no falla el repositorio. Cuando los secretos
-existan, el siguiente push publica automáticamente. Deben ser secretos del repositorio: el trabajo de
-comprobación no tiene asociado el entorno `cloudflare-pages`, así que no ve secretos definidos solo
-para ese entorno.
+El workflow de Cloudflare es opcional y manual. Si faltan los dos secretos, la comprobación previa
+termina correctamente y el job de publicación se omite; no afecta la publicación principal de GitHub
+Pages. Deben ser secretos del repositorio: el trabajo de comprobación no tiene asociado el entorno
+`cloudflare-pages`, así que no ve secretos definidos solo para ese entorno.
 
 El build de GitHub Pages publica la tienda conectada a Supabase: `.github/workflows/deploy.yml` fija la
 base `/ProyectOne/` e incorpora solamente la URL y la clave publishable públicas. Las claves de servidor

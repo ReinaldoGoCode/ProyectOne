@@ -215,10 +215,9 @@ ni una prueba E2E en navegador real.
 - `deploy.yml`: en cada push a `main` instala dependencias, verifica tipos, lint, pruebas, SQL y
   formato, construye y publica en GitHub Pages conectado al proyecto Supabase público. Solo incluye
   la URL y la clave publishable; las claves de servidor nunca se incorporan al frontend.
-- `deploy-cloudflare.yml`: en cada push a `main` comprueba los secretos y publica en Cloudflare
-  Pages cuando existen `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` y el proyecto `norte-moda`;
-  sus variables públicas de Supabase se incorporan únicamente a ese build. Sin los secretos, se
-  omite con un aviso. También puede lanzarse a mano.
+- `deploy-cloudflare.yml`: flujo opcional manual para publicar en Cloudflare Pages cuando existan
+  `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` y el proyecto `norte-moda`. No se ejecuta en cada
+  push; la publicación principal y conectada al backend usa `deploy.yml` en GitHub Pages.
 - `public/_redirects` permite el fallback SPA y `public/_headers` añade cabeceras de seguridad en
   Cloudflare Pages.
 

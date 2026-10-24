@@ -11,8 +11,6 @@ name: Desplegar en Cloudflare Pages
 # - Configurar las variables públicas del build en el entorno de Pages o en
 #   `vars` del repositorio.
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 permissions:
