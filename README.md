@@ -4,14 +4,16 @@ Tienda conceptual de ropa para pequeños comercios venezolanos. Proyecto de port
 checkout, seguimiento de pedidos, panel administrativo y backend Supabase preparado. Todos los
 productos, precios y clientes de la demo son ficticios.
 
-> **Estado real:** la demo local funciona completa en el navegador. El flujo remoto —cotización,
-> creación de pedido, enlace privado de seguimiento, revisión manual de pagos, inventario y panel con
-> Supabase Auth— está implementado y validado contra PostgreSQL embebido, pero **no está conectado a
-> una instancia Supabase ni a WhatsApp real**. No procesa pagos ni envíos reales.
+> **Estado real (24 oct 2026):** el frontend publicado está conectado a Supabase; las 12 migraciones
+> están aplicadas y las 16 Edge Functions activas. El backend remoto responde, pero sus tablas de
+> catálogo están vacías y no hay métodos de pago habilitados, por lo que no se puede crear un pedido.
+> El panel llega al inicio de sesión; las operaciones autenticadas no se han probado. WhatsApp, IA,
+> cobros externos y envíos reales permanecen desactivados.
 
-**Demo publicada:** <https://reinaldogocode.github.io/ProyectOne/>
-La publicación se actualiza desde `main` mediante GitHub Actions. GitHub Pages solo se usa para la
-demostración de portafolio, no como alojamiento de una tienda comercial.
+**Web publicada:** <https://reinaldogocode.github.io/ProyectOne/>
+La publicación se actualiza desde `main` mediante GitHub Actions. GitHub Pages sirve el frontend
+estático de demostración; la tienda no debe operar comercialmente hasta cargar el catálogo real,
+configurar métodos de pago y confirmar un alojamiento compatible con comercio electrónico.
 
 **Repositorio:** <https://github.com/ReinaldoGoCode/ProyectOne>
 

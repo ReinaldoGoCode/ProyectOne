@@ -6,17 +6,21 @@ en `README.md` y `docs/IMPLEMENTACION_BACKEND.md`.
 
 ## 0. Estado de partida
 
-- Frontend público de demostración: <https://reinaldogocode.github.io/ProyectOne/>
-- Panel de demostración: <https://reinaldogocode.github.io/ProyectOne/admin?vista=demo>
+- Frontend público: <https://reinaldogocode.github.io/ProyectOne/>
+- Panel administrativo: <https://reinaldogocode.github.io/ProyectOne/admin>
 - Repositorio: <https://github.com/ReinaldoGoCode/ProyectOne>
-- Supabase Cloud: **no enlazado**. No hay `SUPABASE_ACCESS_TOKEN` ni sesión de CLI.
-- Cloudflare Pages: **no enlazado**. No hay `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` ni
-  sesión de Wrangler.
+- Supabase Cloud: proyecto `ctnpisuizfhxcuxrjhah`; 12 migraciones aplicadas y 16 Edge Functions activas.
+- GitHub Pages: publicación automática desde `main`; Vite usa `/ProyectOne/` como ruta base.
+- Cloudflare Pages: no forma parte del flujo automático actual.
+- Base de datos: no hay categorías, productos, variantes ni pedidos. No se cargó el catálogo ficticio.
+- Métodos de pago: ninguno habilitado; WhatsApp y la IA permanecen apagados.
 - WhatsApp/Meta: **sin app, WABA, número ni tokens**.
 - IA: **apagada**; no hay clave ni autorización para consumir créditos.
 
-GitHub Pages solo sirve la demo estática. Para la tienda comercial hay que completar Supabase y
-Cloudflare Pages. No se debe usar GitHub Pages como hosting comercial.
+GitHub Pages sirve el frontend estático y Supabase el backend. La tienda no puede aceptar pedidos
+hasta cargar el catálogo real y activar métodos manuales con instrucciones confirmadas. Mantén esta
+publicación como demostración; antes de una operación comercial, confirma un alojamiento compatible
+con comercio electrónico y los costes aplicables.
 
 ## 1. Supabase Cloud
 
@@ -81,8 +85,8 @@ Mínimos para arrancar:
 - `SUPABASE_URL`: URL del proyecto, por ejemplo `https://<ref>.supabase.co`.
 - `SUPABASE_ANON_KEY`: clave publicable/anon.
 - `SUPABASE_SERVICE_ROLE_KEY`: clave secreta de servicio. **Solo backend.**
-- `ALLOWED_ORIGIN`: origen exacto del sitio, por ejemplo `https://norte-moda.pages.dev`.
-- `PUBLIC_SITE_URL`: el mismo origen público.
+- `ALLOWED_ORIGIN`: origen exacto `https://reinaldogocode.github.io` (sin `/ProyectOne/`).
+- `PUBLIC_SITE_URL`: URL pública completa `https://reinaldogocode.github.io/ProyectOne/`.
 - `WHATSAPP_SEND_ENABLED=false` hasta la prueba controlada.
 
 Puedes consultar las claves con:

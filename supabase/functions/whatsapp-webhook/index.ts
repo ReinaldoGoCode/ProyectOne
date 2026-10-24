@@ -714,7 +714,10 @@ function buildProductPageUrl(
   try {
     const base = new URL(configuredSite)
     if (base.protocol !== 'https:' || base.username || base.password) return null
-    const productUrl = new URL(`/producto/${encodeURIComponent(context.productSlug)}`, base.origin)
+    base.search = ''
+    base.hash = ''
+    base.pathname = `${base.pathname.replace(/\/+$/, '')}/`
+    const productUrl = new URL(`producto/${encodeURIComponent(context.productSlug)}`, base)
     productUrl.searchParams.set('talla', context.size)
     productUrl.searchParams.set('color', context.color)
     productUrl.searchParams.set('cantidad', String(context.quantity))

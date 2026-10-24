@@ -24,7 +24,7 @@ interface ParamUpdate {
 
 export function CatalogPage() {
   useDocumentTitle('Catálogo · Norte Moda')
-  const { catalog } = useCatalog()
+  const { catalog, catalogMode, refreshCatalog } = useCatalog()
   const [searchParams, setSearchParams] = useSearchParams()
 
   const categorySlug = searchParams.get('categoria')
@@ -154,6 +154,44 @@ export function CatalogPage() {
                 }
               />
             ))}
+          </div>
+        ) : catalogMode === 'loading' ? (
+          <p role="status" className="mt-16 mb-10 text-center text-sm text-stone-600">
+            Cargando prendas…
+          </p>
+        ) : catalogMode === 'error' ? (
+          <div role="alert" className="mt-16 mb-10 flex flex-col items-center text-center">
+            <p className="text-[11px] font-medium tracking-[0.22em] text-brand-700 uppercase">
+              Catálogo no disponible
+            </p>
+            <h2 className="mt-3 text-2xl font-medium tracking-[-0.02em] text-balance">
+              No pudimos cargar las prendas.
+            </h2>
+            <p className="mt-3 max-w-sm text-sm leading-relaxed text-stone-600">
+              Comprueba tu conexión e inténtalo de nuevo.
+            </p>
+            <button
+              type="button"
+              className={buttonClassName('secondary', 'mt-7')}
+              onClick={() => void refreshCatalog()}
+            >
+              Reintentar
+            </button>
+          </div>
+        ) : catalogMode === 'connected' && total === 0 ? (
+          <div className="mt-16 mb-10 flex flex-col items-center text-center">
+            <p className="text-[11px] font-medium tracking-[0.22em] text-brand-700 uppercase">
+              Catálogo vacío
+            </p>
+            <h2 className="mt-3 text-2xl font-medium tracking-[-0.02em] text-balance">
+              Todavía no hay prendas publicadas.
+            </h2>
+            <p className="mt-3 max-w-sm text-sm leading-relaxed text-stone-600">
+              El catálogo se administra desde el panel de Norte Moda.
+            </p>
+            <Link to="/admin" className={buttonClassName('secondary', 'mt-7')}>
+              Abrir administración
+            </Link>
           </div>
         ) : (
           <div className="mt-16 mb-10 flex flex-col items-center text-center">

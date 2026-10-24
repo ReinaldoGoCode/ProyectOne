@@ -1,6 +1,8 @@
 # Norte Moda · estado de implementación
 
-**La integración remota está implementada y validada contra PostgreSQL embebido, pero no activada ni probada contra un proyecto Supabase real.** No hay credenciales ni base enlazada, no se ejecutaron las migraciones en la nube y no se desplegaron funciones. La interfaz administrativa local sin autenticación fue retirada; los datos de catálogo ficticios permanecen para el storefront de demostración y las pruebas automatizadas. No se contrataron servicios ni se enviaron mensajes reales.
+**Estado verificado el 24 de octubre de 2026:** Supabase está enlazado; las 12 migraciones figuran aplicadas y las 16 Edge Functions figuran activas. Las lecturas de cotización y opciones de pago responden desde la web pública. La base remota tiene 0 categorías, 0 productos, 0 variantes y 0 pedidos; el catálogo ficticio de `supabase/seed.sql` no se ha cargado. Por eso no se puede completar una compra real de prueba. Se corrigieron `ALLOWED_ORIGIN` y `PUBLIC_SITE_URL` para el origen publicado `https://reinaldogocode.github.io`. El acceso anónimo a pedidos y métodos de pago devuelve 401 y las tablas privadas tienen RLS habilitado. La pantalla del administrador carga, pero el inicio de sesión y las operaciones con sesión aún no se han probado.
+
+La publicación pública es <https://reinaldogocode.github.io/ProyectOne/>. GitHub Pages funciona como demo estática y no como operación comercial habilitada. WhatsApp, IA, envíos y cobros externos siguen desactivados; no se enviaron mensajes ni se creó ningún pedido durante las comprobaciones.
 
 ## Funcionalidad disponible en el código
 
@@ -84,11 +86,11 @@ La solución sigue el patrón operativo de los importadores de WooCommerce: iden
 
 ## Activación pendiente
 
-1. Antes de operar comercialmente, elegir un alojamiento permitido para comercio electrónico y separado del frontend estático; GitHub Pages no es una opción permitida para una tienda. Para esta fase, si se evalúa Supabase, crear únicamente un proyecto Free sin tarjeta, upgrade ni add-ons pagos. Verificar los límites y política de datos vigentes.
-2. Aplicar las doce migraciones en orden. Cargar `supabase/seed.sql` solo si se quiere probar el catálogo ficticio.
-3. Desplegar las funciones indicadas en `supabase/config.toml`; configurar los secretos de servidor allí, nunca en variables `VITE_*`. `ALLOWED_ORIGIN` debe coincidir con el origen de la web. No cambiar el plan de Supabase, activar add-ons ni habilitar pagos por uso.
-4. Crear una cuenta individual en Supabase Auth y registrar su UUID en `public.admin_users`. No hay credenciales predeterminadas. Permitir la URL `/admin` para recuperación.
-5. Definir `VITE_SUPABASE_URL` y `VITE_SUPABASE_PUBLISHABLE_KEY` en el entorno que construye la web. Si el backend se configura pero las funciones no están desplegadas, el checkout mostrará el error de servidor y no guardará en local como sustituto.
+1. Cargar un catálogo real con productos, variantes, precios y stock desde `/admin` después de iniciar sesión. No importar el seed ficticio a la base de producción.
+2. Activar únicamente métodos de pago manuales y completar sus instrucciones con los datos confirmados por el negocio. El pago permanece pendiente hasta que una persona lo compruebe.
+3. Iniciar sesión en `/admin` y comprobar gestión de catálogo, pedidos, pagos y despacho. La membresía administrativa está registrada, pero la sesión y operaciones autenticadas aún necesitan una prueba del dueño.
+4. Antes de una operación comercial, confirmar un alojamiento compatible con comercio electrónico y sus costes. GitHub Pages sirve esta demostración, no debe anunciarse como tienda comercial operativa.
+5. WhatsApp/Meta, IA gratuita, envío de mensajes y proveedores de pago externos siguen pendientes y apagados. No habilitarlos ni añadir servicios pagos sin confirmar costes y autorización.
 6. Para probar WhatsApp en una fase autorizada, crear una app, WABA y número de prueba Meta; publicar el webhook por HTTPS y configurar sus secretos del servidor. Revisar antes la página de tarifas de Meta y cualquier comisión de proveedor intermediario. No enviar mensajes reales en esta fase.
 7. Mantener `WHATSAPP_SEND_ENABLED=false`. Las respuestas de servicio dentro de 24 horas pueden no tener cargo de Meta, pero el comportamiento de tarifas depende de categoría, país, mensaje entregado y proveedor intermediario. No se habilita la cola saliente ni se programan seguimientos ahora.
 8. No configurar plantillas de inicio de pedido, campañas ni mensajes fuera de la ventana gratuita: los mensajes entregados de categorías facturables pueden generar cargos. El checkout conserva el consentimiento separado y desmarcado para WhatsApp; la revocación por `STOP` bloquea la cola pendiente.

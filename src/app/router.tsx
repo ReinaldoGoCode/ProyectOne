@@ -16,6 +16,11 @@ const router = createBrowserRouter(
   [
     {
       path: '/admin',
+      hydrateFallbackElement: (
+        <div role="status" className="px-5 py-16 text-center text-sm text-stone-600">
+          Cargando administración…
+        </div>
+      ),
       lazy: async () => ({
         Component: (await import('@/features/admin/remote/RemoteAdminPage')).RemoteAdminPage,
       }),
@@ -23,6 +28,11 @@ const router = createBrowserRouter(
     {
       path: '/',
       element: <StoreLayout />,
+      hydrateFallbackElement: (
+        <div role="status" className="px-5 py-16 text-center text-sm text-stone-600">
+          Cargando Norte Moda…
+        </div>
+      ),
       children: [
         {
           index: true,
