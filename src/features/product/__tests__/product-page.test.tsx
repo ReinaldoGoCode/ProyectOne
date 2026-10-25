@@ -31,7 +31,7 @@ describe('ficha de producto', () => {
     expect(html).toContain('alt="Camisa de lino Margarita: imagen de referencia de la prenda"')
     expect(html).toContain('4 unidades disponibles')
     expect(html).toContain('Modo demo: el WhatsApp de la tienda no está configurado.')
-    expect(html).toContain('Comprar por WhatsApp')
+    expect(html).not.toContain('Comprar por WhatsApp')
     expect(html).toContain('Copiar mensaje')
     expect(html).not.toContain('https://wa.me/')
   })

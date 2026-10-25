@@ -19,14 +19,8 @@ import {
 import type { Catalog, Product, Size } from '@/domain/types'
 import {
   buildProductInquiryMessage,
-  buildWhatsAppUrl,
   IS_WHATSAPP_CONFIGURED,
-  STORE_WHATSAPP_NUMBER,
 } from '@/lib/whatsapp'
-import {
-  createRemoteWhatsAppPurchaseContext,
-  type RemoteWhatsAppPurchaseContext,
-} from '@/data/repositories/remoteOrderGateway'
 import {
   createDirectCheckoutIntent,
   resolveDirectCheckoutSelection,
@@ -63,9 +57,6 @@ export function ProductDetail({ product, catalog }: ProductDetailProps) {
   const [quantity, setQuantity] = useState(() => searchParams.get('cantidad') ?? '1')
   const [buyNowError, setBuyNowError] = useState('')
   const [isBuyingNow, setIsBuyingNow] = useState(false)
-  const [whatsAppContext, setWhatsAppContext] = useState<RemoteWhatsAppPurchaseContext | null>(null)
-  const [whatsAppContextError, setWhatsAppContextError] = useState('')
-  const [isPreparingWhatsAppContext, setIsPreparingWhatsAppContext] = useState(false)
 
   const category = catalog.categories.find((item) => item.id === product.categoryId)
   const variants = getProductVariants(catalog.variants, product.id)
@@ -200,31 +191,6 @@ export function ProductDetail({ product, catalog }: ProductDetailProps) {
     } catch {
       setIsBuyingNow(false)
       setBuyNowError('No se pudo abrir el checkout. El carrito sigue intacto; inténtalo de nuevo.')
-    }
-  }
-
-  async function handleWhatsAppPurchase(): Promise<void> {
-    setWhatsAppContextError('')
-    setWhatsAppContext(null)
-    if (selectedVariant === undefined || !quantityIsValid) {
-      setWhatsAppContextError(quantityError)
-      return
-    }
-    setIsPreparingWhatsAppContext(true)
-    try {
-      const context = await createRemoteWhatsAppPurchaseContext({
-        variantId: selectedVariant.id,
-        quantity: requestedQuantity,
-      })
-      setWhatsAppContext(context)
-    } catch (caught) {
-      setWhatsAppContextError(
-        caught instanceof Error
-          ? caught.message
-          : 'No se pudo preparar el contexto de compra para WhatsApp.',
-      )
-    } finally {
-      setIsPreparingWhatsAppContext(false)
     }
   }
 
@@ -388,72 +354,6 @@ export function ProductDetail({ product, catalog }: ProductDetailProps) {
             >
               {buyNowError}
             </p>
-            <button
-              type="button"
-              disabled={!quantityIsValid || isPreparingWhatsAppContext}
-              aria-busy={isPreparingWhatsAppContext}
-              onClick={() => void handleWhatsAppPurchase()}
-              className={buttonClassName(
-                'secondary',
-                'mt-2 w-full disabled:cursor-not-allowed disabled:opacity-40',
-              )}
-            >
-              {isPreparingWhatsAppContext ? 'Preparando consulta…' : 'Comprar por WhatsApp'}
-            </button>
-            {whatsAppContextError ? (
-              <p role="alert" className="mt-2 text-center text-xs text-red-800">
-                {whatsAppContextError}
-              </p>
-            ) : null}
-            {whatsAppContext ? (
-              <div className="mt-3 rounded-2xl bg-emerald-50 p-4 text-sm text-emerald-950">
-                <p>
-                  Contexto listo: {whatsAppContext.product.name}, talla{' '}
-                  {whatsAppContext.product.size}, color {whatsAppContext.product.color}, cantidad{' '}
-                  {whatsAppContext.product.quantity}. El servidor volverá a verificar precio y stock
-                  cuando llegue el mensaje.
-                </p>
-                <p className="mt-1 text-xs">
-                  La referencia vence el{' '}
-                  {new Date(whatsAppContext.expiresAt).toLocaleString('es-VE')}.
-                </p>
-                {whatsAppContext.whatsappUrl ? (
-                  <a
-                    href={whatsAppContext.whatsappUrl}
-                    target="_blank"
-                    rel="noreferrer noopener"
-                    className={buttonClassName('primary', 'mt-3 w-full')}
-                  >
-                    Abrir WhatsApp con el contexto
-                  </a>
-                ) : (
-                  <>
-                    <p className="mt-2 text-xs leading-relaxed">
-                      Falta configurar el número de WhatsApp del negocio en el backend. El contexto
-                      no se asociará hasta que envíes esta referencia al número de la tienda.
-                    </p>
-                    <WhatsAppActions
-                      message={whatsAppContext.prefilledMessage}
-                      label="Copiar referencia de compra"
-                      variant="secondary"
-                    />
-                    {IS_WHATSAPP_CONFIGURED && STORE_WHATSAPP_NUMBER ? (
-                      <a
-                        href={buildWhatsAppUrl(
-                          whatsAppContext.prefilledMessage,
-                          STORE_WHATSAPP_NUMBER,
-                        )}
-                        target="_blank"
-                        rel="noreferrer noopener"
-                        className={buttonClassName('primary', 'mt-3 w-full')}
-                      >
-                        Abrir WhatsApp con el contexto
-                      </a>
-                    ) : null}
-                  </>
-                )}
-              </div>
-            ) : null}
             <WhatsAppActions
               message={inquiryMessage}
               label="Consultar por WhatsApp"
