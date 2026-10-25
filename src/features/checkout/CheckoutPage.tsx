@@ -95,8 +95,8 @@ const INPUT_CLASS =
 
 export function CheckoutPage() {
   useDocumentTitle('Checkout · Norte Moda')
-  const { catalog } = useCatalog()
-  const { lines, clear } = useCart()
+  const { catalog, catalogMode, refreshCatalog } = useCatalog()
+  const { lines, isReady: cartReady, clear } = useCart()
   const { create } = useOrders()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
@@ -460,7 +460,24 @@ export function CheckoutPage() {
       </p>
       <h1 className="mt-3 text-4xl font-medium tracking-[-0.04em] sm:text-5xl">Checkout</h1>
 
-      {hasDirectCheckout && directCheckoutError ? (
+      {!cartReady ? (
+        catalogMode === 'error' ? (
+          <div role="alert" className="mt-8 rounded-2xl bg-amber-50 p-6 text-sm text-amber-950">
+            <p>No se pudo validar tu selección con el catálogo remoto. No se creará un pedido.</p>
+            <button
+              type="button"
+              onClick={() => void refreshCatalog()}
+              className="mt-4 underline underline-offset-4"
+            >
+              Reintentar
+            </button>
+          </div>
+        ) : (
+          <p role="status" className="mt-8 rounded-2xl bg-white/65 p-6 text-sm text-stone-600">
+            Esperando a que el catálogo remoto valide las variantes del carrito…
+          </p>
+        )
+      ) : hasDirectCheckout && directCheckoutError ? (
         <div
           role="alert"
           className="mt-8 rounded-2xl bg-amber-50 p-6 text-sm leading-relaxed text-amber-950 ring-1 ring-amber-900/10"

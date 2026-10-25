@@ -516,7 +516,11 @@ export async function listRemoteAdminOrders(): Promise<readonly RemoteAdminOrder
   const client = getSupabaseBrowserClient()
   if (!client) throw new Error('Supabase todavía no está configurado.')
   const response = await client.functions.invoke<unknown>('admin-orders', { method: 'GET' })
-  if (response.error) throw new Error('No se pudieron cargar pedidos autorizados.')
+  if (response.error) {
+    throw new Error(
+      await describeFunctionError(response.error, 'No se pudieron cargar los pedidos.'),
+    )
+  }
   const data: unknown = response.data
   if (!isRecord(data) || !Array.isArray(data['orders'])) {
     throw new Error('La respuesta de pedidos no es válida.')
@@ -537,7 +541,11 @@ export async function getRemoteAdminDashboardSummary(
   const response = await client.functions.invoke<unknown>('admin-dashboard', {
     body: { from, to },
   })
-  if (response.error) throw new Error('No se pudo cargar el resumen administrativo.')
+  if (response.error) {
+    throw new Error(
+      await describeFunctionError(response.error, 'No se pudo cargar el resumen administrativo.'),
+    )
+  }
   const payload: unknown = response.data
   if (!isRecord(payload)) throw new Error('La respuesta del resumen administrativo no es válida.')
   const summary = parseRemoteAdminDashboardSummary(payload['summary'])
@@ -637,7 +645,11 @@ export async function listRemoteAdminCatalog(): Promise<RemoteAdminCatalog> {
   const client = getSupabaseBrowserClient()
   if (!client) throw new Error('Supabase todavía no está configurado.')
   const response = await client.functions.invoke<unknown>('admin-catalog', { method: 'GET' })
-  if (response.error) throw new Error('No se pudo cargar el catálogo administrativo.')
+  if (response.error) {
+    throw new Error(
+      await describeFunctionError(response.error, 'No se pudo cargar el catálogo administrativo.'),
+    )
+  }
   const payload: unknown = response.data
   if (!isRecord(payload)) throw new Error('La respuesta del catálogo no es válida.')
   const catalog = parseRemoteCatalog(payload)
@@ -800,8 +812,13 @@ export async function listRemoteAdminPaymentMethods(): Promise<
     method: 'GET',
   })
   const payload: unknown = response.data
-  if (response.error || !isRecord(payload) || !Array.isArray(payload['methods'])) {
-    throw new Error('No se pudieron cargar los métodos de pago.')
+  if (response.error) {
+    throw new Error(
+      await describeFunctionError(response.error, 'No se pudieron cargar los métodos de pago.'),
+    )
+  }
+  if (!isRecord(payload) || !Array.isArray(payload['methods'])) {
+    throw new Error('La respuesta de métodos de pago no es válida.')
   }
   const methods = payload['methods'].map(parseRemoteAdminPaymentMethod)
   if (methods.some((method) => method === null) || methods.length !== 7) {
@@ -837,8 +854,16 @@ export async function listRemoteWhatsAppHandoffs(): Promise<readonly RemoteWhats
     method: 'GET',
   })
   const data: unknown = response.data
-  if (response.error || !isRecord(data) || !Array.isArray(data['handoffs'])) {
-    throw new Error('No se pudieron cargar las solicitudes de WhatsApp.')
+  if (response.error) {
+    throw new Error(
+      await describeFunctionError(
+        response.error,
+        'No se pudieron cargar las solicitudes de WhatsApp.',
+      ),
+    )
+  }
+  if (!isRecord(data) || !Array.isArray(data['handoffs'])) {
+    throw new Error('La respuesta de solicitudes de WhatsApp no es válida.')
   }
   const handoffs = data['handoffs'].map(parseRemoteWhatsAppHandoff)
   if (handoffs.some((handoff) => handoff === null)) {
@@ -1078,6 +1103,21 @@ export async function updateRemoteAdminOrder(change: {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+async function describeFunctionError(error: unknown, fallback: string): Promise<string> {
+  const context = isRecord(error) ? error['context'] : null
+  if (context instanceof Response) {
+    const body: unknown = await context
+      .clone()
+      .json()
+      .catch(() => null)
+    if (isRecord(body) && typeof body['error'] === 'string' && body['error'].trim()) {
+      return `${body['error']} (HTTP ${String(context.status)}).`
+    }
+    return `${fallback} (HTTP ${String(context.status)}).`
+  }
+  return fallback
 }
 
 function parseSafeInteger(value: unknown): number | null {

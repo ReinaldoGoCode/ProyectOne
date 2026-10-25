@@ -1,6 +1,8 @@
-import { seedCategories, seedProducts } from '@/data/seed'
+import { useCatalog } from '@/app/providers/catalogContext'
 
 export function StoreStory() {
+  const { catalog, catalogMode } = useCatalog()
+
   return (
     <section id="tienda" className="scroll-mt-24 border-t border-stone-900/6 bg-white/40">
       <div className="mx-auto grid w-full max-w-6xl gap-12 px-5 py-20 sm:px-8 sm:py-28 lg:grid-cols-2 lg:gap-20">
@@ -22,8 +24,8 @@ export function StoreStory() {
         </div>
 
         <ul className="divide-y divide-stone-900/10 border-y border-stone-900/10">
-          {seedCategories.map((category) => {
-            const count = seedProducts.filter(
+          {catalog.categories.map((category) => {
+            const count = catalog.products.filter(
               (product) => product.active && product.categoryId === category.id,
             ).length
 
@@ -41,6 +43,15 @@ export function StoreStory() {
               </li>
             )
           })}
+          {catalog.categories.length === 0 ? (
+            <li className="py-5 text-sm text-stone-500">
+              {catalogMode === 'loading'
+                ? 'Cargando categorías…'
+                : catalogMode === 'error'
+                  ? 'No se pudieron cargar las categorías.'
+                  : 'Todavía no hay categorías publicadas.'}
+            </li>
+          ) : null}
         </ul>
       </div>
     </section>

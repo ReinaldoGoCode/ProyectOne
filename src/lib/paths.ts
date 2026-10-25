@@ -9,3 +9,10 @@ export const BASE_PATH = import.meta.env.BASE_URL
 export function sectionHref(id: string): string {
   return `${BASE_PATH}#${id}`
 }
+
+/** Resolves app-owned public files under Vite's base path on project Pages. */
+export function publicAssetHref(path: string): string {
+  if (/^https?:\/\//i.test(path)) return path
+  if (BASE_PATH !== '/' && path.startsWith(BASE_PATH)) return path
+  return `${BASE_PATH}${path.replace(/^\/+/, '')}`
+}

@@ -5,7 +5,7 @@ import { getTotalStock, listColors } from '@/domain/product'
 import type { Product, Variant } from '@/domain/types'
 import { colorToHex } from '@/lib/colors'
 
-import { GarmentArt } from './GarmentArt'
+import { ProductArtwork } from './ProductArtwork'
 
 interface ProductCardProps {
   readonly product: Product
@@ -26,7 +26,10 @@ export function ProductCard({ product, variants, categoryName }: ProductCardProp
       <article className="min-w-0">
         <div className="relative overflow-hidden rounded-[1.25rem] bg-sand ring-1 ring-stone-900/5 sm:rounded-[1.75rem]">
           <div className="aspect-[4/5] p-4 sm:p-6">
-            <GarmentArt
+            <ProductArtwork
+              imageUrl={product.imageUrl}
+              imageAlt={product.imageAlt}
+              productName={product.name}
               categoryId={product.categoryId}
               color={colors[0] ?? 'Arena'}
               className="h-full w-full drop-shadow-[0_14px_18px_rgba(28,25,23,0.12)] transition-transform duration-700 ease-out group-hover:scale-[1.03]"

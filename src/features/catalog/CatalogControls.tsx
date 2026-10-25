@@ -15,6 +15,7 @@ interface CatalogControlsProps {
   readonly activeCategoryId: CategoryId | null
   readonly counts: ReadonlyMap<CategoryId, number>
   readonly total: number
+  readonly isLoading?: boolean
   readonly search: string
   readonly sort: CatalogSort
   readonly hrefForCategory: (slug: string | null) => string
@@ -36,6 +37,7 @@ export function CatalogControls({
   activeCategoryId,
   counts,
   total,
+  isLoading = false,
   search,
   sort,
   hrefForCategory,
@@ -54,7 +56,7 @@ export function CatalogControls({
               className={pillClassName(activeCategoryId === null)}
             >
               Todas
-              <span className="text-[11px] tabular-nums opacity-60">{total}</span>
+              <span className="text-[11px] tabular-nums opacity-60">{isLoading ? '…' : total}</span>
             </Link>
           </li>
           {categories.map((category) => {

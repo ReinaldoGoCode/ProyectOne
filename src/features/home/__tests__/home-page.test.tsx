@@ -2,6 +2,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it } from 'vitest'
 
+import { CatalogProvider } from '@/app/providers/CatalogProvider'
 import { NotFoundPage } from '@/features/not-found/NotFoundPage'
 
 import { HomePage } from '../HomePage'
@@ -9,9 +10,11 @@ import { HomePage } from '../HomePage'
 describe('portada', () => {
   it('presenta la propuesta y las piezas destacadas del seed', () => {
     const html = renderToStaticMarkup(
-      <MemoryRouter>
-        <HomePage />
-      </MemoryRouter>,
+      <CatalogProvider>
+        <MemoryRouter>
+          <HomePage />
+        </MemoryRouter>
+      </CatalogProvider>,
     )
 
     expect(html).toContain('Pocas prendas')

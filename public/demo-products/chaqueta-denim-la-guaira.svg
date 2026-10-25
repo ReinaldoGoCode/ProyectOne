@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1000" role="img" aria-label="Ilustración de demostración: Chaqueta denim La Guaira">
+  <rect width="800" height="1000" fill="#f6e7d7"/>
+  <circle cx="400" cy="318" r="210" fill="#ecd0b4"/>
+  <g fill="#3f719c" stroke="#6b3a29" stroke-width="8" stroke-linejoin="round"><path d="M247 343 350 281h100l103 62 60 474H481V522h-22v295H341V522h-22v295H187z"/><path d="M400 309v508" fill="none" stroke="#6b3a29" stroke-width="10"/></g>
+  <rect x="286" y="873" width="228" height="12" rx="6" fill="#a95b32"/>
+</svg>

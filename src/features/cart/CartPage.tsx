@@ -8,8 +8,8 @@ import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 
 export function CartPage() {
   useDocumentTitle('Carrito · Norte Moda')
-  const { catalog } = useCatalog()
-  const { lines, summary, setQuantity, removeLine, clear } = useCart()
+  const { catalog, catalogMode, refreshCatalog } = useCatalog()
+  const { lines, isReady, summary, setQuantity, removeLine, clear } = useCart()
   const details = new Map(summary.details.map((detail) => [detail.variant.id, detail]))
 
   return (
@@ -19,7 +19,30 @@ export function CartPage() {
       </p>
       <h1 className="mt-3 text-4xl font-medium tracking-[-0.04em] sm:text-5xl">Carrito</h1>
 
-      {lines.length === 0 ? (
+      {!isReady ? (
+        catalogMode === 'error' ? (
+          <div
+            role="alert"
+            className="mt-10 rounded-2xl bg-amber-50 p-6 text-center text-sm text-amber-950"
+          >
+            <p>No se pudo validar el carrito con el catálogo remoto. Tu selección se conserva.</p>
+            <button
+              type="button"
+              onClick={() => void refreshCatalog()}
+              className="mt-4 underline underline-offset-4"
+            >
+              Reintentar
+            </button>
+          </div>
+        ) : (
+          <p
+            role="status"
+            className="mt-10 rounded-2xl bg-white/60 p-6 text-center text-sm text-stone-600"
+          >
+            Preparando el carrito con el catálogo actual…
+          </p>
+        )
+      ) : lines.length === 0 ? (
         <div className="mt-10 rounded-3xl bg-white/60 p-8 text-center ring-1 ring-stone-900/8 sm:p-12">
           <h2 className="text-2xl font-medium">Tu carrito está vacío</h2>
           <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-stone-600">

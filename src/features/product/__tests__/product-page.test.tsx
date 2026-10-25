@@ -27,6 +27,8 @@ describe('ficha de producto', () => {
 
     expect(html).toContain('Camisa de lino Margarita')
     expect(html).toContain('$28,00')
+    expect(html).toContain('src="/images/products/placeholder.svg"')
+    expect(html).toContain('alt="Camisa de lino Margarita: imagen de referencia de la prenda"')
     expect(html).toContain('4 unidades disponibles')
     expect(html).toContain('Modo demo: el WhatsApp de la tienda no está configurado.')
     expect(html).toContain('Comprar por WhatsApp')

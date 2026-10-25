@@ -5,6 +5,7 @@ import type { CartLine } from '@/domain/types'
 
 export interface CartContextValue {
   readonly lines: readonly CartLine[]
+  readonly isReady: boolean
   readonly summary: CartSummary
   readonly addToCart: (variantId: string, quantity?: number) => string | null
   readonly setQuantity: (variantId: string, quantity: number) => void

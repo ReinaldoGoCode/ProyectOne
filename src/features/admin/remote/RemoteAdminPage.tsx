@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import type { SyntheticEvent } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { Link, useSearchParams } from 'react-router-dom'
@@ -65,6 +65,31 @@ const HANDOFF_REASON_LABELS: Readonly<Record<RemoteWhatsAppHandoff['reason'], st
 }
 
 const MAX_DASHBOARD_PERIOD_DAYS = 366
+type AdminResourceName = 'orders' | 'whatsapp' | 'catalog' | 'payments'
+type AdminResourceErrors = Partial<Record<AdminResourceName, string>>
+
+interface AdminResourceLoad {
+  readonly orders: PromiseSettledResult<readonly RemoteAdminOrder[]>
+  readonly whatsapp: PromiseSettledResult<readonly RemoteWhatsAppHandoff[]>
+  readonly catalog: PromiseSettledResult<RemoteAdminCatalog>
+  readonly payments: PromiseSettledResult<readonly RemoteAdminPaymentMethod[]>
+}
+
+async function loadAdminResources(): Promise<AdminResourceLoad> {
+  const [orders, whatsapp, catalog, payments] = await Promise.allSettled([
+    listRemoteAdminOrders(),
+    listRemoteWhatsAppHandoffs(),
+    listRemoteAdminCatalog(),
+    listRemoteAdminPaymentMethods(),
+  ])
+  return { orders, whatsapp, catalog, payments }
+}
+
+function resourceError(result: PromiseRejectedResult): string {
+  return result.reason instanceof Error
+    ? result.reason.message
+    : 'Falló la consulta de este módulo.'
+}
 
 function getDefaultDashboardPeriod(): { from: string; to: string } {
   const end = new Date()
@@ -108,11 +133,31 @@ export function RemoteAdminPage() {
   const [dashboardPeriod, setDashboardPeriod] = useState(getDefaultDashboardPeriod)
   const [dashboardRefreshKey, setDashboardRefreshKey] = useState(0)
   const [dashboardError, setDashboardError] = useState('')
+  const [resourceErrors, setResourceErrors] = useState<AdminResourceErrors>({})
   const [loading, setLoading] = useState(false)
   const [busyOrderId, setBusyOrderId] = useState<string | null>(null)
   const [busyHandoffId, setBusyHandoffId] = useState<string | null>(null)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
+
+  const refreshAdminResources = useCallback(async () => {
+    const result = await loadAdminResources()
+    const nextErrors: AdminResourceErrors = {}
+
+    if (result.orders.status === 'fulfilled') setOrders(result.orders.value)
+    else nextErrors.orders = resourceError(result.orders)
+
+    if (result.whatsapp.status === 'fulfilled') setHandoffs(result.whatsapp.value)
+    else nextErrors.whatsapp = resourceError(result.whatsapp)
+
+    if (result.catalog.status === 'fulfilled') setAdminCatalog(result.catalog.value)
+    else nextErrors.catalog = resourceError(result.catalog)
+
+    if (result.payments.status === 'fulfilled') setPaymentMethods(result.payments.value)
+    else nextErrors.payments = resourceError(result.payments)
+
+    setResourceErrors(nextErrors)
+  }, [])
 
   useEffect(() => {
     if (!client) return
@@ -133,32 +178,15 @@ export function RemoteAdminPage() {
   useEffect(() => {
     if (!session) return
     let mounted = true
-    void Promise.all([
-      listRemoteAdminOrders(),
-      listRemoteWhatsAppHandoffs(),
-      listRemoteAdminCatalog(),
-      listRemoteAdminPaymentMethods(),
-    ])
-      .then(([nextOrders, nextHandoffs, nextCatalog, nextPaymentMethods]) => {
-        if (mounted) {
-          setOrders(nextOrders)
-          setHandoffs(nextHandoffs)
-          setAdminCatalog(nextCatalog)
-          setPaymentMethods(nextPaymentMethods)
-        }
-      })
-      .catch((caught: unknown) => {
-        if (mounted) {
-          setError(caught instanceof Error ? caught.message : 'No se pudieron cargar los pedidos.')
-        }
-      })
+    void Promise.resolve()
+      .then(() => refreshAdminResources())
       .finally(() => {
         if (mounted) setLoading(false)
       })
     return () => {
       mounted = false
     }
-  }, [session])
+  }, [session, refreshAdminResources])
 
   useEffect(() => {
     if (!session) return
@@ -272,16 +300,7 @@ export function RemoteAdminPage() {
             ? 'Pago verificado manualmente por administrador autorizado.'
             : 'Cambio guardado por administrador autorizado.',
       })
-      const [nextOrders, nextHandoffs, nextCatalog, nextPaymentMethods] = await Promise.all([
-        listRemoteAdminOrders(),
-        listRemoteWhatsAppHandoffs(),
-        listRemoteAdminCatalog(),
-        listRemoteAdminPaymentMethods(),
-      ])
-      setOrders(nextOrders)
-      setHandoffs(nextHandoffs)
-      setAdminCatalog(nextCatalog)
-      setPaymentMethods(nextPaymentMethods)
+      await refreshAdminResources()
       setDashboardRefreshKey((key) => key + 1)
       setNotice(`Pedido ${order.code} actualizado.`)
     } catch (caught) {
@@ -310,16 +329,7 @@ export function RemoteAdminPage() {
         shippingTrackingNumber: details.shippingTrackingNumber,
         shippingNotes: details.shippingNotes,
       })
-      const [nextOrders, nextHandoffs, nextCatalog, nextPaymentMethods] = await Promise.all([
-        listRemoteAdminOrders(),
-        listRemoteWhatsAppHandoffs(),
-        listRemoteAdminCatalog(),
-        listRemoteAdminPaymentMethods(),
-      ])
-      setOrders(nextOrders)
-      setHandoffs(nextHandoffs)
-      setAdminCatalog(nextCatalog)
-      setPaymentMethods(nextPaymentMethods)
+      await refreshAdminResources()
       setNotice(`Datos de envío de ${order.code} guardados.`)
     } catch (caught) {
       setError(
@@ -547,21 +557,9 @@ export function RemoteAdminPage() {
               onClick={() => {
                 setLoading(true)
                 setDashboardError('')
-                void Promise.all([
-                  listRemoteAdminOrders(),
-                  listRemoteWhatsAppHandoffs(),
-                  listRemoteAdminCatalog(),
-                  listRemoteAdminPaymentMethods(),
-                ])
-                  .then(([nextOrders, nextHandoffs, nextCatalog, nextPaymentMethods]) => {
-                    setOrders(nextOrders)
-                    setHandoffs(nextHandoffs)
-                    setAdminCatalog(nextCatalog)
-                    setPaymentMethods(nextPaymentMethods)
+                void refreshAdminResources()
+                  .then(() => {
                     setDashboardRefreshKey((key) => key + 1)
-                  })
-                  .catch((caught: unknown) => {
-                    setError(caught instanceof Error ? caught.message : 'Error de consulta.')
                   })
                   .finally(() => {
                     setLoading(false)
@@ -761,8 +759,8 @@ export function RemoteAdminPage() {
             />
           ) : (
             <p className="mt-5 rounded-2xl bg-amber-50 p-4 text-sm text-amber-950">
-              El catálogo remoto y el historial de existencias aún no están cargados. Comprueba que
-              estén aplicadas las migraciones de inventario.
+              {resourceErrors.catalog ??
+                'El catálogo remoto y el historial de existencias aún no están disponibles.'}
             </p>
           )}
 
@@ -774,7 +772,8 @@ export function RemoteAdminPage() {
             />
           ) : (
             <p className="mt-5 rounded-2xl bg-amber-50 p-4 text-sm text-amber-950">
-              La configuración de pagos no está disponible hasta aplicar su migración.
+              {resourceErrors.payments ??
+                'No hay métodos de pago devueltos por la configuración remota.'}
             </p>
           )}
 
@@ -782,8 +781,11 @@ export function RemoteAdminPage() {
             Pedidos ({orders.length})
           </h2>
           {orders.length === 0 && !loading ? (
-            <p className="mt-3 rounded-2xl bg-white/70 p-5 text-sm text-stone-600">
-              Todavía no hay pedidos remotos.
+            <p
+              role={resourceErrors.orders ? 'alert' : undefined}
+              className={`mt-3 rounded-2xl p-5 text-sm ${resourceErrors.orders ? 'bg-amber-50 text-amber-950' : 'bg-white/70 text-stone-600'}`}
+            >
+              {resourceErrors.orders ?? 'Todavía no hay pedidos remotos.'}
             </p>
           ) : (
             <ul className="mt-4 space-y-4">
@@ -942,8 +944,11 @@ export function RemoteAdminPage() {
               </div>
             </div>
             {handoffs.length === 0 ? (
-              <p className="mt-4 rounded-2xl bg-white/70 p-5 text-sm text-stone-600">
-                No hay solicitudes pendientes.
+              <p
+                role={resourceErrors.whatsapp ? 'alert' : undefined}
+                className={`mt-4 rounded-2xl p-5 text-sm ${resourceErrors.whatsapp ? 'bg-amber-50 text-amber-950' : 'bg-white/70 text-stone-600'}`}
+              >
+                {resourceErrors.whatsapp ?? 'No hay solicitudes pendientes.'}
               </p>
             ) : (
               <ul className="mt-4 space-y-3">

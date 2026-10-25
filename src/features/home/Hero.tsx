@@ -1,18 +1,25 @@
 import { Link } from 'react-router-dom'
 
-import { GarmentArt } from '@/components/ui/GarmentArt'
+import { useCatalog } from '@/app/providers/catalogContext'
+import { ProductArtwork } from '@/components/ui/ProductArtwork'
 import { buttonClassName } from '@/components/ui/button'
-import { seedCategories, seedProducts } from '@/data/seed'
 import { formatMoney } from '@/domain/money'
+import { listColors } from '@/domain/product'
 import { sectionHref } from '@/lib/paths'
 
 /**
- * Portada. La pieza destacada sale del seed para que el precio y el nombre
- * que se muestran sean los mismos que luego verá el catálogo.
+ * Portada basada en el catálogo cargado por el proveedor activo.
  */
 export function Hero() {
-  const heroProduct = seedProducts.find((product) => product.slug === 'camisa-lino-margarita')
-  const activeCount = seedProducts.filter((product) => product.active).length
+  const { catalog, catalogMode } = useCatalog()
+  const heroProduct = catalog.products.find((product) => product.active)
+  const heroCategory = heroProduct
+    ? catalog.categories.find((category) => category.id === heroProduct.categoryId)
+    : null
+  const heroColor = heroProduct
+    ? (listColors(catalog.variants, heroProduct.id)[0] ?? 'Terracota')
+    : 'Terracota'
+  const activeCount = catalog.products.filter((product) => product.active).length
 
   return (
     <section className="relative overflow-hidden">
@@ -50,11 +57,15 @@ export function Hero() {
           <dl className="animate-rise mt-14 flex max-w-md gap-10 border-t border-stone-900/10 pt-6 [animation-delay:240ms]">
             <div>
               <dt className="text-[11px] tracking-[0.14em] text-stone-500 uppercase">Piezas</dt>
-              <dd className="mt-1 text-xl font-medium tabular-nums">{activeCount}</dd>
+              <dd className="mt-1 text-xl font-medium tabular-nums">
+                {catalogMode === 'loading' ? '…' : activeCount}
+              </dd>
             </div>
             <div>
               <dt className="text-[11px] tracking-[0.14em] text-stone-500 uppercase">Categorías</dt>
-              <dd className="mt-1 text-xl font-medium tabular-nums">{seedCategories.length}</dd>
+              <dd className="mt-1 text-xl font-medium tabular-nums">
+                {catalogMode === 'loading' ? '…' : catalog.categories.length}
+              </dd>
             </div>
             <div>
               <dt className="text-[11px] tracking-[0.14em] text-stone-500 uppercase">Tallas</dt>
@@ -66,10 +77,14 @@ export function Hero() {
         <div className="animate-fade relative mx-auto w-full max-w-sm pb-8 [animation-delay:200ms] lg:max-w-md">
           <div className="overflow-hidden rounded-[2.5rem] bg-gradient-to-b from-brand-100 via-brand-50 to-sand p-7 ring-1 ring-stone-900/5 sm:p-9">
             <div className="aspect-[4/5]">
-              <GarmentArt
-                categoryId="camisas"
-                color="Terracota"
+              <ProductArtwork
+                imageUrl={heroProduct?.imageUrl ?? ''}
+                imageAlt={heroProduct?.imageAlt ?? ''}
+                productName={heroProduct?.name ?? 'Prenda destacada'}
+                categoryId={heroProduct?.categoryId ?? 'camisas'}
+                color={heroColor}
                 className="h-full w-full drop-shadow-[0_30px_40px_rgba(92,49,34,0.16)]"
+                loading="eager"
               />
             </div>
           </div>
@@ -79,9 +94,11 @@ export function Hero() {
               <div className="flex items-center justify-between gap-4">
                 <div className="min-w-0">
                   <p className="text-[11px] tracking-[0.16em] text-stone-500 uppercase">
-                    Camisa de lino
+                    {heroCategory?.name ?? 'Selección'}
                   </p>
-                  <p className="mt-0.5 truncate text-sm font-medium">Margarita · Terracota</p>
+                  <p className="mt-0.5 truncate text-sm font-medium">
+                    {heroProduct.name} · {heroColor}
+                  </p>
                 </div>
                 <p className="shrink-0 text-sm font-medium tabular-nums">
                   {formatMoney(heroProduct.priceCents)}

@@ -47,9 +47,11 @@ export function CatalogPage() {
   const count = products.length
 
   const resultLabel =
-    trimmedSearch === ''
-      ? `${String(count)} ${count === 1 ? 'pieza' : 'piezas'}`
-      : `${String(count)} ${count === 1 ? 'resultado' : 'resultados'} para “${trimmedSearch}”`
+    catalogMode === 'loading' && total === 0
+      ? 'Cargando catálogo…'
+      : trimmedSearch === ''
+        ? `${String(count)} ${count === 1 ? 'pieza' : 'piezas'}`
+        : `${String(count)} ${count === 1 ? 'resultado' : 'resultados'} para “${trimmedSearch}”`
 
   function updateParams(next: ParamUpdate): void {
     const params = new URLSearchParams(searchParams)
@@ -126,6 +128,7 @@ export function CatalogPage() {
           activeCategoryId={activeCategory?.id ?? null}
           counts={counts}
           total={total}
+          isLoading={catalogMode === 'loading'}
           search={search}
           sort={sort}
           hrefForCategory={hrefForCategory}

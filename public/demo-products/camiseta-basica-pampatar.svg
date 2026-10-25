@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1000" role="img" aria-label="Ilustración de demostración: Camiseta básica Pampatar">
+  <rect width="800" height="1000" fill="#f6e7d7"/>
+  <circle cx="400" cy="318" r="210" fill="#ecd0b4"/>
+  <g fill="#f8f5ef" stroke="#6b3a29" stroke-width="8" stroke-linejoin="round"><path d="M236 364 350 298h100l114 66 46 142-91 35-22-62v346H303V479l-22 62-91-35z"/></g>
+  <rect x="286" y="873" width="228" height="12" rx="6" fill="#a95b32"/>
+</svg>

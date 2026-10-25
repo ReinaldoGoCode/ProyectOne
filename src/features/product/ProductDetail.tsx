@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 
 import { useCart } from '@/app/providers/cartContext'
-import { GarmentArt } from '@/components/ui/GarmentArt'
+import { ProductArtwork } from '@/components/ui/ProductArtwork'
 import { WhatsAppActions } from '@/components/ui/WhatsAppActions'
 import { buttonClassName } from '@/components/ui/button'
 import { formatMoney } from '@/domain/money'
@@ -256,10 +256,14 @@ export function ProductDetail({ product, catalog }: ProductDetailProps) {
         <div className="lg:sticky lg:top-24">
           <div className="relative overflow-hidden rounded-[2rem] bg-gradient-to-b from-brand-200 via-brand-100 to-sand p-8 ring-1 ring-stone-900/5 sm:p-12">
             <div className="aspect-[4/5]">
-              <GarmentArt
+              <ProductArtwork
+                imageUrl={product.imageUrl}
+                imageAlt={product.imageAlt}
+                productName={product.name}
                 categoryId={product.categoryId}
                 color={selectedColor ?? colors[0] ?? 'Arena'}
                 className="h-full w-full drop-shadow-[0_30px_40px_rgba(92,49,34,0.16)]"
+                loading="eager"
               />
             </div>
 

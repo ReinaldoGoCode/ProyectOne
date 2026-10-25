@@ -1,32 +1,11 @@
 import { Link } from 'react-router-dom'
 
+import { useCatalog } from '@/app/providers/catalogContext'
 import { ProductCard } from '@/components/ui/ProductCard'
-import { seedCategories, seedProducts, seedVariants } from '@/data/seed'
-import type { CategoryId, Product } from '@/domain/types'
-
-/**
- * Selección editorial de la portada. Es una lista curada, no "los primeros
- * cuatro": en una tienda pequeña la portada la decide quien compra.
- */
-const FEATURED_SLUGS = [
-  'camisa-lino-margarita',
-  'vestido-corto-paraguana',
-  'pantalon-cargo-caracas',
-  'jean-recto-maracaibo',
-] as const
-
-function findProduct(slug: string): Product | undefined {
-  return seedProducts.find((product) => product.slug === slug)
-}
-
-function categoryName(categoryId: CategoryId): string {
-  return seedCategories.find((category) => category.id === categoryId)?.name ?? 'Norte Moda'
-}
 
 export function FeaturedProducts() {
-  const featured = FEATURED_SLUGS.map(findProduct).filter(
-    (product): product is Product => product !== undefined,
-  )
+  const { catalog, catalogMode } = useCatalog()
+  const featured = catalog.products.filter((product) => product.active).slice(0, 4)
 
   return (
     <section id="seleccion" className="scroll-mt-24 border-t border-stone-900/6">
@@ -42,7 +21,7 @@ export function FeaturedProducts() {
           </div>
           <div className="sm:text-right">
             <p className="max-w-xs text-sm leading-relaxed text-stone-600">
-              Cuatro piezas de la temporada, elegidas por su tela y su caída.
+              Una selección de las prendas publicadas en el catálogo actual.
             </p>
             <Link
               to="/catalogo"
@@ -64,11 +43,26 @@ export function FeaturedProducts() {
             <ProductCard
               key={product.id}
               product={product}
-              variants={seedVariants}
-              categoryName={categoryName(product.categoryId)}
+              variants={catalog.variants}
+              categoryName={
+                catalog.categories.find((category) => category.id === product.categoryId)?.name ??
+                'Norte Moda'
+              }
             />
           ))}
         </div>
+        {featured.length === 0 ? (
+          <p
+            role={catalogMode === 'loading' ? 'status' : undefined}
+            className="mt-12 text-sm text-stone-500"
+          >
+            {catalogMode === 'loading'
+              ? 'Cargando la selección…'
+              : catalogMode === 'error'
+                ? 'La selección no está disponible en este momento.'
+                : 'Todavía no hay prendas publicadas.'}
+          </p>
+        ) : null}
       </div>
     </section>
   )
