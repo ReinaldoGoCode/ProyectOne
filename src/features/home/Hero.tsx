@@ -1,9 +1,9 @@
 import { Link } from 'react-router-dom'
 
 import { useCatalog } from '@/app/providers/catalogContext'
+import { DualCurrencyPrice } from '@/components/ui/DualCurrencyPrice'
 import { ProductArtwork } from '@/components/ui/ProductArtwork'
 import { buttonClassName } from '@/components/ui/button'
-import { formatMoney } from '@/domain/money'
 import { listColors } from '@/domain/product'
 import { sectionHref } from '@/lib/paths'
 
@@ -100,9 +100,10 @@ export function Hero() {
                     {heroProduct.name} · {heroColor}
                   </p>
                 </div>
-                <p className="shrink-0 text-sm font-medium tabular-nums">
-                  {formatMoney(heroProduct.priceCents)}
-                </p>
+                <DualCurrencyPrice
+                  cents={heroProduct.priceCents}
+                  className="shrink-0 text-right text-sm font-medium tabular-nums"
+                />
               </div>
             </div>
           ) : null}

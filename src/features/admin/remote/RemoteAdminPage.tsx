@@ -17,6 +17,7 @@ import {
   updateRemoteWhatsAppHandoff,
   uploadRemoteProductImage,
   saveRemoteAdminPaymentMethods,
+  getRemoteAdminPaymentReceipt,
 } from '@/data/repositories/remoteOrderGateway'
 import type {
   RemoteAdminCatalog,
@@ -31,7 +32,7 @@ import { DELIVERY_METHOD_LABELS } from '@/domain/labels'
 import { AdminDemoPreview } from './AdminDemoPreview'
 import { RemoteInventoryPanel } from './RemoteInventoryPanel'
 import { RemotePaymentSettingsPanel } from './RemotePaymentSettingsPanel'
-import { formatMoney } from '@/domain/money'
+import { formatMoney, formatVesCents } from '@/domain/money'
 import { getSupabaseBrowserClient } from '@/lib/supabase'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 
@@ -843,35 +844,74 @@ export function RemoteAdminPage() {
                     />
                   )}
                   {order.paymentReference ? (
-                    <p className="mt-3 rounded-xl bg-amber-50 p-3 text-sm text-amber-950">
-                      Referencia informada por WhatsApp: <strong>{order.paymentReference}</strong>.
-                      Requiere verificación manual; no confirma el pago.
-                    </p>
+                    <div className="mt-3 rounded-xl bg-amber-50 p-3 text-sm text-amber-950">
+                      <p>
+                        Reporte de pago · Referencia: <strong>{order.paymentReference}</strong>
+                      </p>
+                      {order.paymentReportedAmountCents !== null ? (
+                        <p className="mt-1">
+                          Monto informado:{' '}
+                          <strong>
+                            {order.paymentReportedCurrency === 'VES'
+                              ? `${formatVesCents(order.paymentReportedAmountCents)} Bs.`
+                              : formatMoney(order.paymentReportedAmountCents)}
+                          </strong>
+                        </p>
+                      ) : null}
+                      {order.paymentPaidAt ? <p>Fecha declarada: {order.paymentPaidAt}</p> : null}
+                      {order.paymentNote ? <p className="mt-1">Nota: {order.paymentNote}</p> : null}
+                      {order.paymentAmountMatches === true ? (
+                        <p className="mt-1">El monto coincide con la cotización registrada.</p>
+                      ) : order.paymentAmountMatches === false ? (
+                        <p className="mt-1 font-medium">
+                          El monto no coincide; revisa la diferencia.
+                        </p>
+                      ) : (
+                        <p className="mt-1">
+                          Monto pendiente de comparación: la tasa de esta orden es ficticia.
+                        </p>
+                      )}
+                      {order.paymentReceiptAvailable ? (
+                        <PaymentReceiptAction orderId={order.id} />
+                      ) : (
+                        <p className="mt-2 font-medium">No se adjuntó un comprobante revisable.</p>
+                      )}
+                      <p className="mt-2 text-xs">
+                        El pago continúa pendiente hasta que un administrador verifique la
+                        operación.
+                      </p>
+                    </div>
                   ) : null}
                   <p className="mt-3 text-xs text-stone-500">
                     Creado {new Date(order.createdAt).toLocaleString('es-VE')}
                   </p>
                   <div className="mt-4 flex flex-wrap gap-2">
                     {order.paymentStatus === 'pending' ? (
-                      <ActionButton
-                        busy={busyOrderId === order.id}
-                        onClick={() => {
-                          void applyChange(order, 'payment', 'review')
-                        }}
-                      >
-                        Registrar comprobante para revisión
-                      </ActionButton>
+                      <p className="text-xs text-stone-500">
+                        Esperando el reporte de pago del cliente. El pedido no se descuenta del
+                        inventario hasta la aprobación.
+                      </p>
                     ) : null}
                     {order.paymentStatus === 'review' ? (
                       <>
-                        <ActionButton
-                          busy={busyOrderId === order.id}
-                          onClick={() => {
-                            void applyChange(order, 'payment', 'paid')
-                          }}
-                        >
-                          Confirmar pago revisado
-                        </ActionButton>
+                        {order.paymentReference &&
+                        order.paymentReportedAmountCents !== null &&
+                        order.paymentPaidAt &&
+                        order.paymentReceiptAvailable ? (
+                          <ActionButton
+                            busy={busyOrderId === order.id}
+                            onClick={() => {
+                              void applyChange(order, 'payment', 'paid')
+                            }}
+                          >
+                            Confirmar pago revisado
+                          </ActionButton>
+                        ) : (
+                          <p className="text-xs text-amber-900">
+                            Falta una referencia, monto, fecha o comprobante. No se puede confirmar
+                            este reporte.
+                          </p>
+                        )}
                         <ActionButton
                           busy={busyOrderId === order.id}
                           onClick={() => {
@@ -1048,6 +1088,53 @@ function ActionButton({
     >
       {busy ? 'Guardando…' : children}
     </button>
+  )
+}
+
+function PaymentReceiptAction({ orderId }: { readonly orderId: string }) {
+  const [busy, setBusy] = useState(false)
+  const [url, setUrl] = useState('')
+  const [error, setError] = useState('')
+
+  async function requestLink(): Promise<void> {
+    setBusy(true)
+    setError('')
+    try {
+      setUrl(await getRemoteAdminPaymentReceipt(orderId))
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'No se pudo abrir el comprobante.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="mt-2">
+      {url ? (
+        <a
+          href={url}
+          target="_blank"
+          rel="noreferrer"
+          className="font-medium underline underline-offset-2"
+        >
+          Descargar comprobante (enlace válido por 1 minuto)
+        </a>
+      ) : (
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => void requestLink()}
+          className="font-medium underline underline-offset-2 disabled:opacity-50"
+        >
+          {busy ? 'Preparando acceso…' : 'Preparar descarga privada del comprobante'}
+        </button>
+      )}
+      {error ? (
+        <p role="alert" className="mt-1 text-xs text-red-800">
+          {error}
+        </p>
+      ) : null}
+    </div>
   )
 }
 

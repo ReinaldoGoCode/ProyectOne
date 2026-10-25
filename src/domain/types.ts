@@ -97,6 +97,10 @@ export interface ExchangeQuote {
   readonly source: 'demo_ficticia' | 'bcv'
   readonly quotedAt: string
   readonly expiresAt: string
+  /** Immutable BCV publication metadata captured with remote orders. */
+  readonly effectiveDate?: string | undefined
+  readonly sourceUrl?: string | undefined
+  readonly retrievedAt?: string | undefined
 }
 
 export type PaymentMethod =

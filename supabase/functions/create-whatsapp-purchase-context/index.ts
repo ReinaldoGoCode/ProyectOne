@@ -1,22 +1,21 @@
-import { getServiceClient, json, sha256Hex } from '../_shared/http.ts'
+import { corsHeaders, getServiceClient, isAllowedOrigin, json, sha256Hex } from '../_shared/http.ts'
 
 const MAX_BODY_BYTES = 4096
 const TOKEN_BYTES = 32
 
 Deno.serve(async (request) => {
   const origin = request.headers.get('origin')
-  const allowedOrigin = Deno.env.get('ALLOWED_ORIGIN')?.trim()
   if (request.method === 'OPTIONS') {
-    if (!allowedOrigin || !origin || origin !== allowedOrigin) {
+    if (!origin || !isAllowedOrigin(request)) {
       return json(request, 403, { error: 'Origin not allowed.' })
     }
     return new Response('ok', {
       status: 204,
-      headers: corsHeadersForAllowedOrigin(allowedOrigin),
+      headers: corsHeaders(request),
     })
   }
   if (request.method !== 'POST') return json(request, 405, { error: 'Method not allowed.' })
-  if (!allowedOrigin || !origin || origin !== allowedOrigin) {
+  if (!origin || !isAllowedOrigin(request)) {
     return json(request, 403, { error: 'Origin not allowed.' })
   }
   if (!(request.headers.get('content-type') ?? '').toLowerCase().includes('application/json')) {
@@ -115,7 +114,6 @@ function randomToken(): string {
   const bytes = crypto.getRandomValues(new Uint8Array(TOKEN_BYTES))
   return [...bytes].map((byte) => byte.toString(16).padStart(2, '0')).join('')
 }
-
 function formatCents(cents: number): string {
   return (cents / 100).toFixed(2)
 }
@@ -145,14 +143,4 @@ function isPurchaseSnapshot(value: unknown): value is {
     Number.isInteger(value.stock) &&
     typeof value.expiresAt === 'string'
   )
-}
-
-function corsHeadersForAllowedOrigin(allowedOrigin: string): HeadersInit {
-  return {
-    'Access-Control-Allow-Origin': allowedOrigin,
-    'Access-Control-Allow-Headers': 'authorization, apikey, content-type',
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
-    'Content-Type': 'application/json; charset=utf-8',
-    Vary: 'Origin',
-  }
 }

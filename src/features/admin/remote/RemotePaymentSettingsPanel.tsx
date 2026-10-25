@@ -71,8 +71,8 @@ export function RemotePaymentSettingsPanel({
           </p>
           <h2 className="mt-2 text-2xl font-medium tracking-tight">Métodos de pago</h2>
           <p className="mt-2 max-w-2xl text-sm leading-relaxed text-stone-600">
-            Todos comienzan desactivados. Activa un método manual solo cuando tengas instrucciones
-            públicas listas para mostrar durante la compra.
+            El checkout muestra los métodos manuales activos. Revisa sus instrucciones públicas
+            antes de guardarlos; ningún pago se confirma automáticamente.
           </p>
         </div>
         <button

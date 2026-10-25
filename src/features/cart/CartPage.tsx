@@ -2,8 +2,8 @@ import { Link } from 'react-router-dom'
 
 import { useCatalog } from '@/app/providers/catalogContext'
 import { useCart } from '@/app/providers/cartContext'
+import { DualCurrencyPrice } from '@/components/ui/DualCurrencyPrice'
 import { buttonClassName } from '@/components/ui/button'
-import { formatMoney } from '@/domain/money'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 
 export function CartPage() {
@@ -136,9 +136,10 @@ export function CartPage() {
                             +
                           </button>
                         </div>
-                        <p className="min-w-24 text-right text-sm font-medium tabular-nums">
-                          {formatMoney(detail.lineTotalCents)}
-                        </p>
+                        <DualCurrencyPrice
+                          cents={detail.lineTotalCents}
+                          className="min-w-24 text-right text-sm font-medium tabular-nums"
+                        />
                       </>
                     ) : (
                       <p className="text-sm text-stone-500">{line.quantity} en carrito</p>
@@ -179,9 +180,10 @@ export function CartPage() {
             <h2 className="text-lg font-medium">Resumen</h2>
             <div className="mt-5 flex justify-between gap-4 text-sm text-stone-600">
               <span>{summary.itemCount} artículos</span>
-              <span className="font-medium tabular-nums text-ink">
-                {formatMoney(summary.subtotalCents)}
-              </span>
+              <DualCurrencyPrice
+                cents={summary.subtotalCents}
+                className="text-right font-medium tabular-nums text-ink"
+              />
             </div>
             <p className="mt-4 border-t border-stone-900/10 pt-4 text-xs leading-relaxed text-stone-500">
               La entrega se coordina en el siguiente paso. Los precios son de demostración y no se

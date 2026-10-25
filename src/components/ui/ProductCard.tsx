@@ -1,10 +1,10 @@
 import { Link } from 'react-router-dom'
 
-import { formatMoney } from '@/domain/money'
 import { getTotalStock, listColors } from '@/domain/product'
 import type { Product, Variant } from '@/domain/types'
 import { colorToHex } from '@/lib/colors'
 
+import { DualCurrencyPrice } from './DualCurrencyPrice'
 import { ProductArtwork } from './ProductArtwork'
 
 interface ProductCardProps {
@@ -50,9 +50,10 @@ export function ProductCard({ product, variants, categoryName }: ProductCardProp
               {product.name}
             </h3>
           </div>
-          <p className="shrink-0 text-[13px] font-medium tabular-nums sm:text-[15px]">
-            {formatMoney(product.priceCents)}
-          </p>
+          <DualCurrencyPrice
+            cents={product.priceCents}
+            className="shrink-0 text-right text-[13px] font-medium tabular-nums sm:text-[15px]"
+          />
         </div>
 
         <div className="mt-2.5 flex items-center gap-2">

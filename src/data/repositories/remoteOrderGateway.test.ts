@@ -5,6 +5,7 @@ import {
   parseRemoteAdminPaymentMethod,
   parseRemoteCatalog,
   parseRemotePaymentReferenceResult,
+  parseRemotePublicOrder,
   parseRemoteStorePaymentOption,
   parseRemoteWhatsAppPurchaseContext,
 } from './remoteOrderGateway'
@@ -164,6 +165,7 @@ describe('parseRemotePaymentReferenceResult', () => {
     submittedAt: '2026-10-22T10:00:00.000Z',
     alreadySubmitted: false,
     alreadyVerified: false,
+    amountMatches: null,
   }
 
   it('acepta la respuesta de la función de referencia', () => {
@@ -173,6 +175,83 @@ describe('parseRemotePaymentReferenceResult', () => {
   it('rechaza estados y marcas que no sean del tipo esperado', () => {
     expect(parseRemotePaymentReferenceResult({ ...result, alreadySubmitted: 'yes' })).toBeNull()
     expect(parseRemotePaymentReferenceResult({ ...result, reference: 12345 })).toBeNull()
+  })
+})
+
+describe('parseRemotePublicOrder', () => {
+  it('acepta las marcas de tiempo UTC con offset que devuelve Postgres', () => {
+    const order = parseRemotePublicOrder({
+      id: 'order-test',
+      code: 'NM-0002',
+      createdAt: '2026-10-25T18:11:11.289335+00:00',
+      customer: { firstName: 'Prueba', lastName: 'Netlify', phone: '0000000000', email: null },
+      deliveryMethod: 'retiro',
+      shippingAddress: null,
+      shippingAgency: null,
+      shippingCompany: null,
+      shippingTrackingNumber: null,
+      shippingNotes: null,
+      paymentMethod: 'pago_movil',
+      paymentInstructions: '',
+      paymentReference: null,
+      customerNote: 'PRUEBA TÉCNICA. Sin pago, no contactar.',
+      subtotalCents: 2600,
+      shippingCents: 0,
+      totalCents: 2600,
+      orderStatus: 'awaiting_payment',
+      paymentStatus: 'pending',
+      fulfillmentStatus: 'new',
+      items: [
+        {
+          productId: 'demo-product',
+          variantId: 'demo-variant',
+          productName: 'DEMO · Blusa satinada',
+          size: 'L',
+          color: 'Marfil',
+          unitPriceCents: 2600,
+          quantity: 1,
+        },
+      ],
+      history: [
+        {
+          id: 'payment-event',
+          axis: 'payment',
+          from: null,
+          to: 'pending',
+          at: '2026-10-25T18:11:11.289335+00:00',
+          note: null,
+        },
+        {
+          id: 'order-event',
+          axis: 'order',
+          from: null,
+          to: 'awaiting_payment',
+          at: '2026-10-25T18:11:11.289335+00:00',
+          note: null,
+        },
+        {
+          id: 'fulfillment-event',
+          axis: 'fulfillment',
+          from: null,
+          to: 'new',
+          at: '2026-10-25T18:11:11.289335+00:00',
+          note: null,
+        },
+      ],
+      notes: [],
+      exchangeQuote: {
+        vesPerUsd: '887.302000',
+        source: 'bcv',
+        quotedAt: '2026-10-25T18:11:11.289335+00:00',
+        expiresAt: '2026-10-25T18:26:11.289335+00:00',
+        effectiveDate: '2026-10-27',
+        sourceUrl: 'https://rates.dolarvzla.com/bcv/current.json',
+        retrievedAt: '2026-10-25T18:00:04.008629+00:00',
+      },
+    })
+
+    expect(order).not.toBeNull()
+    expect(order?.exchangeQuote?.quotedAt).toBe('2026-10-25T18:11:11.289335+00:00')
   })
 })
 

@@ -12,6 +12,10 @@ major_version = 17
 [db.seed]
 sql_paths = ["./seed.sql"]
 
+[auth]
+site_url = "https://norte-moda-tienda.netlify.app"
+additional_redirect_urls = ["https://norte-moda-tienda.netlify.app/**", "https://reinaldogocode.github.io/ProyectOne/**"]
+
 [functions.create-order]
 verify_jwt = false
 
@@ -21,10 +25,16 @@ verify_jwt = false
 [functions.demo-quote]
 verify_jwt = false
 
+[functions.exchange-rate]
+verify_jwt = false
+
 [functions.checkout-quote]
 verify_jwt = false
 
 [functions.admin-orders]
+verify_jwt = true
+
+[functions.admin-payment-receipt]
 verify_jwt = true
 
 [functions.admin-catalog]

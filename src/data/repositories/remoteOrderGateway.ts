@@ -8,6 +8,8 @@ import type {
   ShippingAddress,
   Size,
 } from '@/domain/types'
+import { BCV_SOURCE_URL } from '@/domain/exchangeRate'
+import type { PublicBcvRate } from '@/domain/exchangeRate'
 import { parseCatalog, parseOrders } from '@/data/schemas'
 
 import { getSupabaseBrowserClient } from '@/lib/supabase'
@@ -15,9 +17,13 @@ import { getSupabaseBrowserClient } from '@/lib/supabase'
 export interface RemoteExchangeQuote {
   readonly id: string
   readonly vesPerUsd: string
-  readonly source: 'demo_ficticia' | 'bcv'
+  readonly source: 'bcv'
   readonly quotedAt: string
   readonly expiresAt: string
+  readonly effectiveDate: string
+  readonly sourceUrl: string
+  readonly retrievedAt: string
+  readonly rateWarning: boolean
 }
 
 export interface RemoteOrderDraft {
@@ -73,6 +79,11 @@ export interface RemoteCheckoutQuote extends RemoteExchangeQuote {
   }[]
 }
 
+export interface RemoteBcvRateStatus {
+  readonly rate: PublicBcvRate | null
+  readonly warning: string | null
+}
+
 export interface RemoteOrderCredentials {
   readonly idempotencyKey: string
   readonly trackingToken: string
@@ -105,6 +116,12 @@ export interface RemoteAdminOrder {
   readonly shippingNotes: string | null
   readonly totalCents: number
   readonly paymentReference: string | null
+  readonly paymentReportedAmountCents: number | null
+  readonly paymentReportedCurrency: 'VES' | 'USD' | null
+  readonly paymentPaidAt: string | null
+  readonly paymentNote: string | null
+  readonly paymentAmountMatches: boolean | null
+  readonly paymentReceiptAvailable: boolean
   readonly orderStatus: 'awaiting_payment' | 'confirmed' | 'inventory_exception' | 'cancelled'
   readonly paymentStatus: 'pending' | 'review' | 'paid' | 'rejected' | 'cancelled'
   readonly fulfillmentStatus: 'new' | 'preparing' | 'shipped' | 'delivered' | 'cancelled'
@@ -202,30 +219,39 @@ export function createRemoteOrderCredentials(): RemoteOrderCredentials {
   return { idempotencyKey: crypto.randomUUID(), trackingToken }
 }
 
-export async function requestRemoteDemoQuote(): Promise<RemoteExchangeQuote> {
+export async function requestRemoteBcvRate(): Promise<RemoteBcvRateStatus> {
   const client = getSupabaseBrowserClient()
   if (!client) throw new Error('Supabase todavía no está configurado.')
-  const response = await client.functions.invoke<unknown>('demo-quote', { body: {} })
+  const response = await client.functions.invoke<unknown>('exchange-rate', { method: 'GET' })
   const payload: unknown = response.data
-  if (response.error || !isRecord(payload) || !isRecord(payload['quote'])) {
-    throw new Error('No se pudo consultar la tasa de demostración.')
+  if (response.error || !isRecord(payload)) {
+    throw new Error('No se pudo consultar la tasa BCV guardada.')
   }
-  const quote = payload['quote']
-  const source = quote['source']
+  const warning = typeof payload['warning'] === 'string' ? payload['warning'] : null
+  const rawRate = payload['rate']
+  if (rawRate === null) return { rate: null, warning }
   if (
-    typeof quote['id'] !== 'string' ||
-    typeof quote['vesPerUsd'] !== 'string' ||
-    (source !== 'demo_ficticia' && source !== 'bcv') ||
-    typeof quote['quotedAt'] !== 'string' ||
-    typeof quote['expiresAt'] !== 'string'
-  )
-    throw new Error('La respuesta de tasa no es válida.')
+    !isRecord(rawRate) ||
+    typeof rawRate['vesPerUsd'] !== 'string' ||
+    !/^(?:0|[1-9]\d*)(?:\.\d{1,6})?$/.test(rawRate['vesPerUsd']) ||
+    typeof rawRate['effectiveDate'] !== 'string' ||
+    rawRate['sourceUrl'] !== BCV_SOURCE_URL ||
+    typeof rawRate['retrievedAt'] !== 'string' ||
+    typeof rawRate['isStale'] !== 'boolean' ||
+    !(rawRate['warning'] === null || typeof rawRate['warning'] === 'string')
+  ) {
+    throw new Error('La respuesta de tasa BCV no es válida.')
+  }
   return {
-    id: quote['id'],
-    vesPerUsd: quote['vesPerUsd'],
-    source,
-    quotedAt: quote['quotedAt'],
-    expiresAt: quote['expiresAt'],
+    rate: {
+      vesPerUsd: rawRate['vesPerUsd'],
+      effectiveDate: rawRate['effectiveDate'],
+      sourceUrl: rawRate['sourceUrl'],
+      retrievedAt: rawRate['retrievedAt'],
+      isStale: rawRate['isStale'],
+      warning: rawRate['warning'],
+    },
+    warning,
   }
 }
 
@@ -237,7 +263,15 @@ export async function requestRemoteCheckoutQuote(input: {
   if (!client) throw new Error('Supabase todavía no está configurado.')
   const response = await client.functions.invoke<unknown>('checkout-quote', { body: input })
   const payload: unknown = response.data
-  if (response.error || !isRecord(payload) || !isRecord(payload['quote'])) {
+  if (response.error) {
+    throw new Error(
+      await describeFunctionError(
+        response.error,
+        'No se pudo validar el importe, las existencias y la tasa BCV en el servidor.',
+      ),
+    )
+  }
+  if (!isRecord(payload) || !isRecord(payload['quote'])) {
     throw new Error('No se pudo validar el importe y las existencias en el servidor.')
   }
   const raw = payload['quote']
@@ -245,9 +279,13 @@ export async function requestRemoteCheckoutQuote(input: {
   if (
     typeof raw['id'] !== 'string' ||
     typeof raw['vesPerUsd'] !== 'string' ||
-    (raw['source'] !== 'demo_ficticia' && raw['source'] !== 'bcv') ||
+    raw['source'] !== 'bcv' ||
     typeof raw['quotedAt'] !== 'string' ||
     typeof raw['expiresAt'] !== 'string' ||
+    typeof raw['effectiveDate'] !== 'string' ||
+    typeof raw['sourceUrl'] !== 'string' ||
+    typeof raw['retrievedAt'] !== 'string' ||
+    typeof raw['rateWarning'] !== 'boolean' ||
     !Number.isSafeInteger(raw['subtotalCents']) ||
     !Number.isSafeInteger(raw['shippingCents']) ||
     !Number.isSafeInteger(raw['totalCents']) ||
@@ -262,6 +300,10 @@ export async function requestRemoteCheckoutQuote(input: {
     source: raw['source'],
     quotedAt: raw['quotedAt'],
     expiresAt: raw['expiresAt'],
+    effectiveDate: raw['effectiveDate'],
+    sourceUrl: raw['sourceUrl'],
+    retrievedAt: raw['retrievedAt'],
+    rateWarning: raw['rateWarning'],
     subtotalCents: raw['subtotalCents'] as number,
     shippingCents: raw['shippingCents'] as number,
     totalCents: raw['totalCents'] as number,
@@ -400,19 +442,32 @@ export interface RemotePaymentReferenceResult {
   readonly submittedAt: string | null
   readonly alreadySubmitted: boolean
   readonly alreadyVerified: boolean
+  readonly amountMatches: boolean | null
 }
 
-/** Records a buyer-supplied reference; it never approves the payment. */
-export async function submitRemotePaymentReference(input: {
+/** Records a buyer-supplied report; it never approves the payment. */
+export async function submitRemotePaymentReport(input: {
   readonly code: string
   readonly trackingToken: string
   readonly reference: string
   readonly note: string
+  readonly amountCents: number
+  readonly paidAt: string
+  readonly receipt: File | null
 }): Promise<RemotePaymentReferenceResult> {
   const client = getSupabaseBrowserClient()
   if (!client) throw new Error('Supabase todavía no está configurado.')
+  const body = new FormData()
+  body.set('code', input.code)
+  body.set('trackingToken', input.trackingToken)
+  body.set('reference', input.reference)
+  body.set('note', input.note)
+  body.set('amountCents', String(input.amountCents))
+  body.set('currency', 'VES')
+  body.set('paidAt', input.paidAt)
+  if (input.receipt) body.set('receipt', input.receipt, input.receipt.name)
   const response = await client.functions.invoke<unknown>('submit-payment-reference', {
-    body: input,
+    body,
   })
   const payload: unknown = response.data
   if (response.error || !isRecord(payload) || !isRecord(payload['result'])) {
@@ -445,7 +500,12 @@ export function parseRemotePaymentReferenceResult(
     !(value['reference'] === null || typeof value['reference'] === 'string') ||
     !(value['submittedAt'] === null || typeof value['submittedAt'] === 'string') ||
     typeof value['alreadySubmitted'] !== 'boolean' ||
-    typeof value['alreadyVerified'] !== 'boolean'
+    typeof value['alreadyVerified'] !== 'boolean' ||
+    !(
+      value['amountMatches'] === undefined ||
+      value['amountMatches'] === null ||
+      typeof value['amountMatches'] === 'boolean'
+    )
   ) {
     return null
   }
@@ -455,7 +515,21 @@ export function parseRemotePaymentReferenceResult(
     submittedAt: value['submittedAt'],
     alreadySubmitted: value['alreadySubmitted'],
     alreadyVerified: value['alreadyVerified'],
+    amountMatches: typeof value['amountMatches'] === 'boolean' ? value['amountMatches'] : null,
   }
+}
+
+export async function getRemoteAdminPaymentReceipt(orderId: string): Promise<string> {
+  const client = getSupabaseBrowserClient()
+  if (!client) throw new Error('Supabase todavía no está configurado.')
+  const response = await client.functions.invoke<unknown>('admin-payment-receipt', {
+    body: { orderId },
+  })
+  const payload: unknown = response.data
+  if (response.error || !isRecord(payload) || typeof payload['url'] !== 'string') {
+    throw new Error('No se pudo abrir el comprobante privado.')
+  }
+  return payload['url']
 }
 
 export async function lookupRemoteOrder(code: string, trackingToken: string): Promise<Order> {
@@ -891,6 +965,12 @@ function parseAdminOrder(value: unknown): RemoteAdminOrder | null {
   const orderStatus = value['order_status']
   const paymentStatus = value['payment_status']
   const fulfillmentStatus = value['fulfillment_status']
+  const reportedAmount = value['payment_reported_amount_cents'] ?? null
+  const reportedCurrency = value['payment_reported_currency'] ?? null
+  const paymentPaidAt = value['payment_paid_at'] ?? null
+  const paymentNote = value['payment_note'] ?? null
+  const amountMatches = value['payment_amount_matches'] ?? null
+  const receiptAvailable = value['payment_receipt_available'] ?? false
   const validOrderStatus = [
     'awaiting_payment',
     'confirmed',
@@ -920,6 +1000,12 @@ function parseAdminOrder(value: unknown): RemoteAdminOrder | null {
     ) ||
     !(value['shipping_notes'] === null || typeof value['shipping_notes'] === 'string') ||
     !(value['payment_reference'] === null || typeof value['payment_reference'] === 'string') ||
+    !(reportedAmount === null || Number.isSafeInteger(reportedAmount)) ||
+    !(reportedCurrency === null || reportedCurrency === 'VES' || reportedCurrency === 'USD') ||
+    !(paymentPaidAt === null || typeof paymentPaidAt === 'string') ||
+    !(paymentNote === null || typeof paymentNote === 'string') ||
+    !(amountMatches === null || typeof amountMatches === 'boolean') ||
+    typeof receiptAvailable !== 'boolean' ||
     typeof customer['firstName'] !== 'string' ||
     typeof customer['lastName'] !== 'string' ||
     typeof customer['phone'] !== 'string'
@@ -958,6 +1044,12 @@ function parseAdminOrder(value: unknown): RemoteAdminOrder | null {
     shippingNotes: value['shipping_notes'],
     totalCents: value['total_cents'] as number,
     paymentReference: value['payment_reference'],
+    paymentReportedAmountCents: typeof reportedAmount === 'number' ? reportedAmount : null,
+    paymentReportedCurrency: reportedCurrency,
+    paymentPaidAt,
+    paymentNote,
+    paymentAmountMatches: amountMatches,
+    paymentReceiptAvailable: receiptAvailable,
     orderStatus: orderStatus as RemoteAdminOrder['orderStatus'],
     paymentStatus: paymentStatus as RemoteAdminOrder['paymentStatus'],
     fulfillmentStatus: fulfillmentStatus as RemoteAdminOrder['fulfillmentStatus'],
@@ -1188,7 +1280,7 @@ function parseRemoteQuoteItems(value: unknown): RemoteCheckoutQuote['items'] | n
   return items
 }
 
-function parseRemotePublicOrder(value: unknown): Order | null {
+export function parseRemotePublicOrder(value: unknown): Order | null {
   if (!isRecord(value) || !isRecord(value['customer']) || !Array.isArray(value['items']))
     return null
   const paymentMap = {
@@ -1300,7 +1392,17 @@ function parseRemotePublicOrder(value: unknown): Order | null {
     subtotalCents: value['subtotalCents'],
     shippingCents: value['shippingCents'],
     totalCents: value['totalCents'],
-    exchangeQuote: quote,
+    exchangeQuote: {
+      vesPerUsd: quote['vesPerUsd'],
+      source: quote['source'],
+      quotedAt: quote['quotedAt'],
+      expiresAt: quote['expiresAt'],
+      ...(typeof quote['effectiveDate'] === 'string'
+        ? { effectiveDate: quote['effectiveDate'] }
+        : {}),
+      ...(typeof quote['sourceUrl'] === 'string' ? { sourceUrl: quote['sourceUrl'] } : {}),
+      ...(typeof quote['retrievedAt'] === 'string' ? { retrievedAt: quote['retrievedAt'] } : {}),
+    },
     orderStatus,
     paymentStatus,
     fulfillmentStatus,

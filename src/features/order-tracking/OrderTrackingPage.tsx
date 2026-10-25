@@ -17,10 +17,18 @@ import { convertUsdCentsToVesCents, formatMoney, formatVesCents } from '@/domain
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import {
   lookupRemoteOrder,
-  submitRemotePaymentReference,
+  submitRemotePaymentReport,
 } from '@/data/repositories/remoteOrderGateway'
 import { buildOrderMessage } from '@/lib/whatsapp'
 import type { Order } from '@/domain/types'
+import { PagoMovilDetails } from '@/features/checkout/PagoMovilDetails'
+
+function localDateInputValue(): string {
+  const now = new Date()
+  const month = String(now.getMonth() + 1).padStart(2, '0')
+  const day = String(now.getDate()).padStart(2, '0')
+  return `${String(now.getFullYear())}-${month}-${day}`
+}
 
 export function OrderTrackingPage() {
   useDocumentTitle('Consulta de pedido · Norte Moda')
@@ -44,6 +52,9 @@ export function OrderTrackingPage() {
   } | null>(null)
   const [reference, setReference] = useState('')
   const [referenceNote, setReferenceNote] = useState('')
+  const [reportedAmount, setReportedAmount] = useState('')
+  const [paidAt, setPaidAt] = useState(localDateInputValue)
+  const [receiptFile, setReceiptFile] = useState<File | null>(null)
   const [referenceSubmitting, setReferenceSubmitting] = useState(false)
   const [referenceMessage, setReferenceMessage] = useState('')
   const [referenceError, setReferenceError] = useState('')
@@ -137,14 +148,44 @@ export function OrderTrackingPage() {
       setReferenceError('Escribe la referencia de la operación (4 a 80 caracteres).')
       return
     }
+    const amountText = reportedAmount.trim().replace(',', '.')
+    const amountValue = Number(amountText)
+    if (
+      isRemoteLookup &&
+      (!/^\d+(?:\.\d{1,2})?$/.test(amountText) ||
+        !Number.isSafeInteger(Math.round(amountValue * 100)) ||
+        amountValue <= 0)
+    ) {
+      setReferenceError('Indica el monto transferido en bolívares (hasta 2 decimales).')
+      return
+    }
+    if (isRemoteLookup && (!paidAt || paidAt > localDateInputValue())) {
+      setReferenceError('Indica una fecha de pago válida, no futura.')
+      return
+    }
+    if (isRemoteLookup && !receiptFile) {
+      setReferenceError('Adjunta el comprobante para que administración pueda revisar el pago.')
+      return
+    }
+    if (
+      receiptFile &&
+      (receiptFile.size > 5 * 1024 * 1024 ||
+        !['image/jpeg', 'image/png', 'image/webp', 'application/pdf'].includes(receiptFile.type))
+    ) {
+      setReferenceError('El comprobante debe ser JPG, PNG, WebP o PDF y pesar hasta 5 MB.')
+      return
+    }
     setReferenceSubmitting(true)
     try {
       if (isRemoteLookup) {
-        await submitRemotePaymentReference({
+        await submitRemotePaymentReport({
           code: order.code,
           trackingToken,
           reference: normalized,
           note: referenceNote.trim(),
+          amountCents: Math.round(amountValue * 100),
+          paidAt,
+          receipt: receiptFile,
         })
         const refreshed = await lookupRemoteOrder(code, trackingToken)
         setRemoteLookup({ key: remoteLookupKey, order: refreshed })
@@ -173,6 +214,8 @@ export function OrderTrackingPage() {
       }
       setReference('')
       setReferenceNote('')
+      setReportedAmount('')
+      setReceiptFile(null)
     } catch (caught) {
       setReferenceError(
         caught instanceof Error ? caught.message : 'No se pudo registrar la referencia.',
@@ -394,7 +437,9 @@ export function OrderTrackingPage() {
               <p className="flex justify-between text-sm text-stone-600">
                 <span>
                   Total en bolívares ·{' '}
-                  {order.exchangeQuote.source === 'demo_ficticia' ? 'tasa ficticia' : 'BCV'}
+                  {order.exchangeQuote.source === 'demo_ficticia'
+                    ? 'cotización de demostración histórica'
+                    : `BCV · vigencia ${order.exchangeQuote.effectiveDate ?? 'sin fecha'}`}
                 </span>
                 <span>
                   {formatVesCents(
@@ -406,7 +451,14 @@ export function OrderTrackingPage() {
             <p className="pt-2 text-xs text-stone-500">
               Pago previsto: {PAYMENT_METHOD_LABELS[order.paymentMethod]}
             </p>
-            {order.paymentInstructions ? (
+            {order.paymentMethod === 'pago_movil' ? (
+              <PagoMovilDetails
+                instructions={order.paymentInstructions ?? ''}
+                showRateNotice={
+                  order.exchangeQuote?.source !== 'bcv' || !order.exchangeQuote.effectiveDate
+                }
+              />
+            ) : order.paymentInstructions ? (
               <div className="mt-3 rounded-xl bg-paper p-3 text-sm leading-relaxed text-stone-700">
                 <p className="text-xs font-semibold tracking-wide text-stone-500 uppercase">
                   Instrucciones guardadas con el pedido
@@ -417,7 +469,11 @@ export function OrderTrackingPage() {
           </div>
 
           <div className="mt-7 rounded-2xl bg-paper p-4">
-            <h3 className="font-medium">Referencia del pago</h3>
+            <h3 className="font-medium">
+              {order.paymentMethod === 'pago_movil'
+                ? 'Reporte de Pago Móvil'
+                : 'Referencia del pago'}
+            </h3>
             {order.paymentReference ? (
               <p className="mt-2 text-sm text-stone-700">
                 Referencia informada: <strong>{order.paymentReference}</strong>
@@ -427,7 +483,7 @@ export function OrderTrackingPage() {
             )}
             {['pendiente', 'por_verificar', 'rechazado'].includes(order.paymentStatus) ? (
               <form
-                className="mt-4 grid gap-3 sm:grid-cols-[1fr_1.5fr_auto] sm:items-end"
+                className="mt-4 grid gap-3 sm:grid-cols-2 sm:items-end"
                 onSubmit={(event) => {
                   event.preventDefault()
                   void registerPaymentReference()
@@ -459,12 +515,55 @@ export function OrderTrackingPage() {
                     className="mt-1.5 min-h-11 w-full rounded-xl bg-white px-3 text-sm text-ink ring-1 ring-stone-900/12 focus-visible:ring-2 focus-visible:ring-ink/30 focus-visible:outline-none"
                   />
                 </label>
+                {isRemoteLookup ? (
+                  <>
+                    <label className="text-xs font-medium text-stone-600">
+                      Monto transferido (Bs.)
+                      <input
+                        value={reportedAmount}
+                        onChange={(event) => {
+                          setReportedAmount(event.currentTarget.value)
+                        }}
+                        inputMode="decimal"
+                        autoComplete="off"
+                        placeholder="Ej. 1250,00"
+                        className="mt-1.5 min-h-11 w-full rounded-xl bg-white px-3 text-sm text-ink ring-1 ring-stone-900/12 focus-visible:ring-2 focus-visible:ring-ink/30 focus-visible:outline-none"
+                      />
+                    </label>
+                    <label className="text-xs font-medium text-stone-600">
+                      Fecha de la transferencia
+                      <input
+                        type="date"
+                        value={paidAt}
+                        max={localDateInputValue()}
+                        onChange={(event) => {
+                          setPaidAt(event.currentTarget.value)
+                        }}
+                        className="mt-1.5 min-h-11 w-full rounded-xl bg-white px-3 text-sm text-ink ring-1 ring-stone-900/12 focus-visible:ring-2 focus-visible:ring-ink/30 focus-visible:outline-none"
+                      />
+                    </label>
+                    <label className="text-xs font-medium text-stone-600 sm:col-span-2">
+                      Comprobante (JPG, PNG, WebP o PDF; máximo 5 MB)
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp,application/pdf"
+                        onChange={(event) => {
+                          setReceiptFile(event.currentTarget.files?.[0] ?? null)
+                        }}
+                        className="mt-1.5 block min-h-11 w-full rounded-xl bg-white px-3 py-2 text-sm ring-1 ring-stone-900/12 file:mr-3 file:rounded-full file:border-0 file:bg-paper file:px-3 file:py-1"
+                      />
+                    </label>
+                  </>
+                ) : null}
                 <button
                   type="submit"
                   disabled={referenceSubmitting}
-                  className={buttonClassName('primary', 'min-h-11 disabled:opacity-60')}
+                  className={buttonClassName(
+                    'primary',
+                    'min-h-11 sm:col-span-2 disabled:opacity-60',
+                  )}
                 >
-                  {referenceSubmitting ? 'Registrando…' : 'Enviar a revisión'}
+                  {referenceSubmitting ? 'Registrando…' : 'Reportar pago para revisión'}
                 </button>
               </form>
             ) : null}

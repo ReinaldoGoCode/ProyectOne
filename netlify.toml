@@ -1,0 +1,17 @@
+[build]
+command = "pnpm build"
+publish = "dist"
+
+[build.environment]
+NODE_VERSION = "24"
+VITE_BASE_PATH = "/"
+# Public client configuration only. Supabase service-role and DB secrets stay
+# in Supabase Edge Function secrets and are never exposed to Vite.
+VITE_SUPABASE_URL = "https://ctnpisuizfhxcuxrjhah.supabase.co"
+VITE_SUPABASE_PUBLISHABLE_KEY = "sb_publishable_AJYvJHSmKJ8_RYymY1IR1Q_-_UJh1d2"
+VITE_STORE_WHATSAPP_NUMBER = "584142351183"
+
+[[redirects]]
+from = "/*"
+to = "/index.html"
+status = 200

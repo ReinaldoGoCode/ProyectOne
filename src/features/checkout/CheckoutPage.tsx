@@ -11,12 +11,12 @@ import { useOrders } from '@/app/providers/orderContext'
 import { buttonClassName } from '@/components/ui/button'
 import { DELIVERY_METHOD_LABELS } from '@/domain/labels'
 import { createOrderItems } from '@/domain/order'
-import { createDemoExchangeQuote } from '@/domain/exchangeRate'
 import { summarizeCart } from '@/domain/cart'
-import { convertUsdCentsToVesCents, formatMoney, formatVesCents } from '@/domain/money'
+import { formatMoney, formatVesCents } from '@/domain/money'
 import { getShippingCents } from '@/domain/shipping'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import { getSupabaseBrowserClient } from '@/lib/supabase'
+import { PagoMovilDetails } from './PagoMovilDetails'
 import {
   createRemoteOrder,
   createRemoteOrderCredentials,
@@ -123,7 +123,6 @@ export function CheckoutPage() {
   const [paymentOptionsLoading, setPaymentOptionsLoading] = useState(usesRemoteBackend)
   const [paymentOptionsError, setPaymentOptionsError] = useState('')
   const [submitError, setSubmitError] = useState('')
-  const [exchangeQuote, setExchangeQuote] = useState(() => createDemoExchangeQuote())
   const [remoteQuoteResult, setRemoteQuoteResult] = useState<{
     readonly fingerprint: string
     readonly quote: Awaited<ReturnType<typeof requestRemoteCheckoutQuote>>
@@ -141,16 +140,6 @@ export function CheckoutPage() {
   const checkoutFingerprint = JSON.stringify(
     checkoutLines.map((line) => ({ variantId: line.variantId, quantity: line.quantity })),
   )
-  useEffect(() => {
-    if (usesRemoteBackend) return
-    const refreshDelay = Math.max(0, Date.parse(exchangeQuote.expiresAt) - Date.now())
-    const timer = window.setTimeout(() => {
-      setExchangeQuote(createDemoExchangeQuote())
-    }, refreshDelay)
-    return () => {
-      window.clearTimeout(timer)
-    }
-  }, [exchangeQuote.expiresAt, usesRemoteBackend])
   const {
     register,
     control,
@@ -217,7 +206,6 @@ export function CheckoutPage() {
   const summary = summarizeCart(checkoutLines, catalog)
   const shippingCents = getShippingCents(deliveryMethod)
   const totalCents = summary.subtotalCents + shippingCents
-  const totalVesCents = convertUsdCentsToVesCents(totalCents, exchangeQuote.vesPerUsd)
   const remoteQuote =
     remoteQuoteResult?.fingerprint === quoteRequestFingerprint ? remoteQuoteResult.quote : null
   const remoteQuoteError =
@@ -236,10 +224,7 @@ export function CheckoutPage() {
         if (!current) return
         setRemoteQuoteResult({ fingerprint: quoteRequestFingerprint, quote })
         setQuoteConfirmationPending(
-          quote.subtotalCents !== summary.subtotalCents ||
-            quote.shippingCents !== shippingCents ||
-            quote.vesPerUsd !== exchangeQuote.vesPerUsd ||
-            quote.source !== exchangeQuote.source,
+          quote.subtotalCents !== summary.subtotalCents || quote.shippingCents !== shippingCents,
         )
       })
       .catch((caught: unknown) => {
@@ -264,16 +249,12 @@ export function CheckoutPage() {
     summary.canCheckout,
     summary.subtotalCents,
     shippingCents,
-    exchangeQuote.vesPerUsd,
-    exchangeQuote.source,
   ])
 
   const shownSubtotalCents = remoteQuote?.subtotalCents ?? summary.subtotalCents
   const shownShippingCents = remoteQuote?.shippingCents ?? shippingCents
   const shownTotalCents = remoteQuote?.totalCents ?? totalCents
-  const shownVesTotalCents = remoteQuote?.vesTotalCents ?? totalVesCents
-  const shownRate = remoteQuote?.vesPerUsd ?? exchangeQuote.vesPerUsd
-  const quoteSourceLabel = remoteQuote?.source === 'bcv' ? 'BCV' : 'tasa ficticia de demo'
+  const shownVesTotalCents = remoteQuote?.vesTotalCents
 
   const onSubmit: SubmitHandler<CheckoutFormValues> = async (values) => {
     setSubmitError('')
@@ -318,8 +299,7 @@ export function CheckoutPage() {
         currentQuote.shippingCents !== remoteQuote.shippingCents ||
         currentQuote.totalCents !== remoteQuote.totalCents ||
         currentQuote.vesTotalCents !== remoteQuote.vesTotalCents ||
-        currentQuote.vesPerUsd !== remoteQuote.vesPerUsd ||
-        currentQuote.source !== remoteQuote.source
+        currentQuote.vesPerUsd !== remoteQuote.vesPerUsd
       if (quoteChanged) {
         setRemoteQuoteResult({ fingerprint: quoteRequestFingerprint, quote: currentQuote })
         setQuoteConfirmationPending(true)
@@ -434,7 +414,6 @@ export function CheckoutPage() {
       customerNote: values.customerNote.trim() || null,
       items: createOrderItems(latestSummary.details),
       shippingCents,
-      exchangeQuote,
     })
 
     if (order === null) {
@@ -676,14 +655,21 @@ export function CheckoutPage() {
                     )}
                   </label>
                   {selectedPaymentOption?.instructions ? (
-                    <div className="mt-3 rounded-xl bg-paper p-3 text-sm leading-relaxed text-stone-700">
-                      <p className="text-xs font-semibold tracking-wide text-stone-500 uppercase">
-                        Instrucciones de pago
-                      </p>
-                      <p className="mt-1 whitespace-pre-wrap">
-                        {selectedPaymentOption.instructions}
-                      </p>
-                    </div>
+                    selectedPaymentMethod === 'pago_movil' ? (
+                      <PagoMovilDetails
+                        instructions={selectedPaymentOption.instructions}
+                        showRateNotice={remoteQuote?.source !== 'bcv'}
+                      />
+                    ) : (
+                      <div className="mt-3 rounded-xl bg-paper p-3 text-sm leading-relaxed text-stone-700">
+                        <p className="text-xs font-semibold tracking-wide text-stone-500 uppercase">
+                          Instrucciones de pago
+                        </p>
+                        <p className="mt-1 whitespace-pre-wrap">
+                          {selectedPaymentOption.instructions}
+                        </p>
+                      </div>
+                    )
                   ) : null}
                   <p className="mt-2 text-xs leading-relaxed text-stone-500">
                     Seleccionar un método no realiza el pago. Un administrador autorizado verifica y
@@ -773,7 +759,9 @@ export function CheckoutPage() {
                   <span className="mt-1 block text-sm font-normal text-stone-600">
                     {usesRemoteBackend && !remoteQuote
                       ? 'Consultando importe…'
-                      : `${formatVesCents(shownVesTotalCents)} · ${quoteSourceLabel}`}
+                      : typeof shownVesTotalCents === 'number'
+                        ? `${formatVesCents(shownVesTotalCents)} Bs.`
+                        : 'Equivalente en Bs. no disponible'}
                   </span>
                 </dd>
               </div>
@@ -781,16 +769,25 @@ export function CheckoutPage() {
             <p className="mt-3 text-xs leading-relaxed text-stone-500">
               {usesRemoteBackend && remoteQuote ? (
                 <>
-                  Cotización del servidor: {shownRate} Bs./USD · {quoteSourceLabel}. Vence{' '}
-                  {new Date(remoteQuote.expiresAt).toLocaleTimeString('es-VE')}.
+                  Tasa BCV: {remoteQuote.vesPerUsd} Bs./USD, vigente desde{' '}
+                  {remoteQuote.effectiveDate}. Cotización válida hasta{' '}
+                  {new Date(remoteQuote.expiresAt).toLocaleTimeString('es-VE')}. Tasa consultada por
+                  la tienda el{' '}
+                  {new Date(remoteQuote.retrievedAt).toLocaleString('es-VE', {
+                    timeZone: 'America/Caracas',
+                    dateStyle: 'short',
+                    timeStyle: 'short',
+                  })}{' '}
+                  desde el feed DolarVZLA (dato atribuido al BCV); consulta la vigencia en el portal
+                  oficial.
+                  {remoteQuote.rateWarning
+                    ? ' No se pudo confirmar una actualización reciente; revisa la fecha antes de pagar.'
+                    : ''}
                 </>
               ) : usesRemoteBackend ? (
                 'El servidor debe confirmar precios, existencias y cotización antes de crear el pedido.'
               ) : (
-                <>
-                  Conversión referencial ficticia de {shownRate} Bs./USD; no es la tasa BCV. Vence{' '}
-                  {new Date(exchangeQuote.expiresAt).toLocaleTimeString('es-VE')}.
-                </>
+                'En modo local no se obtiene una tasa BCV; no se calcula ni se registra un importe en bolívares.'
               )}
             </p>
             {usesRemoteBackend ? (

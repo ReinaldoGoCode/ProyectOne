@@ -70,7 +70,10 @@ try {
   const migrationsDir = join(root, 'supabase', 'migrations')
   const migrations = (await readdir(migrationsDir)).filter((name) => name.endsWith('.sql')).sort()
   for (const migration of migrations) {
-    const sql = await readFile(join(migrationsDir, migration), 'utf8')
+    const sql = (await readFile(join(migrationsDir, migration), 'utf8')).replace(
+      /-- BEGIN SUPABASE CLOUD ONLY[\s\S]*?-- END SUPABASE CLOUD ONLY/g,
+      '',
+    )
     await db.exec(sql)
     console.log(`  ✓ ${migration}`)
   }
@@ -87,6 +90,23 @@ try {
   ok(catalog.products === 20, `catálogo con 20 productos activos (${catalog.products})`)
   ok(catalog.variants > 20, `variantes cargadas (${catalog.variants})`)
 
+  const [paymentConfiguration] = await query(`
+    select active, public_instructions
+    from public.payment_methods where method = 'pago_movil'
+  `)
+  ok(paymentConfiguration.active, 'Pago Móvil queda habilitado por la migración')
+  ok(
+    paymentConfiguration.public_instructions.includes('V-14082115') &&
+      paymentConfiguration.public_instructions.includes('Banco Venezolano de Crédito') &&
+      paymentConfiguration.public_instructions.includes('0412-3095646'),
+    'la configuración pública conserva exactamente los datos autorizados',
+  )
+  const [receiptBucket] = await query(
+    `select public, file_size_limit from storage.buckets where id = 'payment-receipts'`,
+  )
+  ok(receiptBucket.public === false, 'el bucket de comprobantes permanece privado')
+  ok(receiptBucket.file_size_limit === 5242880, 'el bucket limita los archivos a 5 MB')
+
   await query(`
     update public.payment_methods
     set active = true,
@@ -94,9 +114,28 @@ try {
     where method = 'pago_movil'
   `)
 
-  const [quoteRow] = await query('select public.issue_demo_quote() as quote')
+  const [refreshClaim] = await query('select public.claim_bcv_rate_refresh() as claimed')
+  ok(refreshClaim.claimed === true, 'el primer proceso puede reclamar la actualización BCV')
+  const [duplicateRefreshClaim] = await query('select public.claim_bcv_rate_refresh() as claimed')
+  ok(duplicateRefreshClaim.claimed === false, 'el límite impide reintentos consecutivos')
+  await query(`
+    select public.save_bcv_rate(
+      900.123456,
+      (now() at time zone 'America/Caracas')::date
+    )
+  `)
+
+  const [quoteRow] = await query('select public.issue_bcv_quote() as quote')
   const quote = quoteRow.quote
-  ok(quote?.id && quote.source === 'demo_ficticia', 'cotización de demostración emitida')
+  ok(
+    quote?.id && quote.source === 'bcv' && quote.effectiveDate,
+    'cotización BCV emitida con su fecha de vigencia',
+  )
+  ok(quote.rateWarning === false, 'una tasa recién guardada no muestra advertencia de antigüedad')
+  ok(
+    (await query(`select public.issue_demo_quote() as quote`))[0].quote?.source === 'bcv',
+    'el RPC antiguo ahora delega a una cotización BCV fechada',
+  )
 
   const [variant] = await query(`
     select v.id, v.stock, p.price_cents
@@ -133,6 +172,11 @@ try {
   const preview = previewRow.preview
   ok(preview.totalCents === variant.price_cents * 2, 'el servidor recalcula el total')
   ok(preview.shippingCents === 0, 'retiro sin costo de envío')
+  const expectedVesTotal = Number((BigInt(preview.totalCents) * 900123456n + 500000n) / 1000000n)
+  ok(
+    preview.vesTotalCents === expectedVesTotal,
+    'la conversión VES usa redondeo decimal preciso desde la tasa BCV guardada',
+  )
 
   console.log('4. Creación idempotente del pedido')
   const customer = {
@@ -168,6 +212,18 @@ try {
   ok(/^NM-\d{4,}$/.test(created.code), `pedido creado con código ${created.code}`)
   ok(created.totalCents === preview.totalCents, 'total guardado coincide con la cotización')
   ok(created.paymentStatus === 'pending', 'el pago empieza pendiente')
+  const [frozenRate] = await query(
+    `select exchange_rate_effective_date, exchange_rate_source_url, exchange_rate_retrieved_at
+     from public.orders where id = $1::uuid`,
+    [created.id],
+  )
+  ok(
+    new Date(frozenRate.exchange_rate_effective_date).toISOString().slice(0, 10) ===
+      quote.effectiveDate &&
+      frozenRate.exchange_rate_source_url === 'https://rates.dolarvzla.com/bcv/current.json' &&
+      frozenRate.exchange_rate_retrieved_at !== null,
+    'el pedido conserva la tasa y la procedencia BCV usadas al crearlo',
+  )
 
   const [replayedRow] = await query(
     `select public.create_public_order_v2(
@@ -182,6 +238,31 @@ try {
   )
   const [orderCount] = await query('select count(*)::int as count from public.orders')
   ok(orderCount.count === 1, 'no se duplicó el pedido')
+
+  await query(`
+    select public.save_bcv_rate(
+      901.123456,
+      (now() at time zone 'America/Caracas')::date
+    )
+  `)
+  const [unchangedOrder] = await query(
+    `select ves_per_usd, ves_total_cents, exchange_rate_effective_date
+     from public.orders where id = $1::uuid`,
+    [created.id],
+  )
+  ok(
+    unchangedOrder.ves_per_usd === '900.123456' &&
+      unchangedOrder.ves_total_cents === preview.vesTotalCents &&
+      new Date(unchangedOrder.exchange_rate_effective_date).toISOString().slice(0, 10) ===
+        quote.effectiveDate,
+    'actualizar la tasa no modifica importes ni vigencia de pedidos anteriores',
+  )
+  await query(`select public.record_bcv_rate_failure('upstream_unavailable')`)
+  const [fallbackQuote] = await query('select public.issue_bcv_quote() as quote')
+  ok(
+    fallbackQuote.quote?.rateWarning === true && fallbackQuote.quote?.vesPerUsd === '901.123456',
+    'si el portal falla se conserva la última tasa y se etiqueta con advertencia',
+  )
 
   await expectError(
     `select public.create_public_order_v2(
@@ -212,16 +293,53 @@ try {
   ])
   ok(wrongLookup.order_data === null, 'un token incorrecto no revela el pedido')
 
+  const adminId = '33333333-3333-4333-8333-333333333333'
+  await query('insert into auth.users (id, email) values ($1::uuid, $2)', [
+    adminId,
+    'admin@example.test',
+  ])
+  await query('insert into public.admin_users (user_id) values ($1::uuid)', [adminId])
+
   const [referenceRow] = await query(
     'select public.submit_public_payment_reference($1, $2, $3, $4) as result',
-    [created.code, tokenHash, 'REF-12345', 'Transferencia del 22/10'],
+    [created.code, tokenHash, 'REF-LEGACY', 'Referencia antigua sin comprobante'],
   )
   ok(referenceRow.result.paymentStatus === 'review', 'la referencia deja el pago en revisión')
   ok(referenceRow.result.alreadySubmitted === false, 'la primera referencia se registra')
 
+  await expectError(
+    `select public.admin_update_payment($1::uuid, 'paid', 'Sin comprobante', $2::uuid)`,
+    [created.id, adminId],
+    '22023',
+    'bloquea la aprobación de un reporte sin monto ni comprobante',
+  )
+
+  const reportReceiptPath = '123e4567-e89b-12d3-a456-426614174000.pdf'
+  const [reportRow] = await query(
+    `select public.submit_public_payment_report($1, $2, $3, $4, $5, 'VES', current_date, $6) as result`,
+    [created.code, tokenHash, 'REF-12345', 'Pago Móvil de prueba', 300000, reportReceiptPath],
+  )
+  ok(reportRow.result.paymentStatus === 'review', 'el reporte completo permanece en revisión')
+  ok(
+    reportRow.result.amountMatches === false,
+    'la referencia se compara contra el total VES congelado',
+  )
+  const [storedReport] = await query(
+    `select status, reported_amount_cents, reported_currency, paid_at, receipt_path
+     from public.payment_attempts where order_id = $1::uuid and reference = 'REF-12345'`,
+    [created.id],
+  )
+  ok(
+    String(storedReport.reported_amount_cents) === '300000' &&
+      storedReport.reported_currency === 'VES' &&
+      storedReport.paid_at !== null &&
+      storedReport.receipt_path === reportReceiptPath,
+    'monto, moneda, fecha y comprobante quedan asociados al reporte',
+  )
+
   const [duplicateReference] = await query(
-    'select public.submit_public_payment_reference($1, $2, $3, $4) as result',
-    [created.code, tokenHash, 'REF-12345', ''],
+    `select public.submit_public_payment_report($1, $2, $3, $4, $5, 'VES', current_date, $6) as result`,
+    [created.code, tokenHash, 'REF-12345', '', 300000, reportReceiptPath],
   )
   ok(
     duplicateReference.result.alreadySubmitted === true,
@@ -229,8 +347,8 @@ try {
   )
 
   await expectError(
-    'select public.submit_public_payment_reference($1, $2, $3, $4)',
-    [created.code, 'b'.repeat(64), 'REF-99999', ''],
+    `select public.submit_public_payment_report($1, $2, $3, $4, $5, 'VES', current_date, $6)`,
+    [created.code, 'b'.repeat(64), 'REF-99999', '', 300000, reportReceiptPath],
     'P0002',
     'rechaza una referencia sin el token privado correcto',
   )
@@ -243,13 +361,6 @@ try {
   ok(paymentBefore.order_status === 'awaiting_payment', 'la referencia no confirma el pedido')
 
   console.log('6. Autorización y revisión administrativa')
-  const adminId = '33333333-3333-4333-8333-333333333333'
-  await query('insert into auth.users (id, email) values ($1::uuid, $2)', [
-    adminId,
-    'admin@example.test',
-  ])
-  await query('insert into public.admin_users (user_id) values ($1::uuid)', [adminId])
-
   await expectError(
     `select public.admin_update_payment($1::uuid, 'paid', 'sin permiso', $2::uuid)`,
     [created.id, '44444444-4444-4444-8444-444444444444'],
@@ -305,8 +416,8 @@ try {
     'dos pedidos pueden esperar revisión por las mismas unidades',
   )
   await query(
-    `select public.admin_update_payment($1::uuid, 'review', 'Comprobante de prueba', $2::uuid)`,
-    [raceOrderA.created.id, adminId],
+    `select public.submit_public_payment_report($1, $2, 'REF-RACE-A', '', 10000, 'VES', current_date, '123e4567-e89b-12d3-a456-426614174001.pdf')`,
+    [raceOrderA.created.code, createHash('sha256').update('competing-order-a').digest('hex')],
   )
   const [racePaidA] = await query(
     `select public.admin_update_payment($1::uuid, 'paid', 'Prueba autorizada', $2::uuid) as result`,
@@ -317,8 +428,30 @@ try {
     'el primer pago de prueba consume las unidades disponibles',
   )
   await query(
-    `select public.admin_update_payment($1::uuid, 'review', 'Comprobante de prueba', $2::uuid)`,
+    `select public.submit_public_payment_report($1, $2, 'REF-RACE-B1', '', 10000, 'VES', current_date, '123e4567-e89b-12d3-a456-426614174002.pdf')`,
+    [raceOrderB.created.code, createHash('sha256').update('competing-order-b').digest('hex')],
+  )
+  await query(
+    `select public.admin_update_payment($1::uuid, 'rejected', 'Comprobante no coincide', $2::uuid)`,
     [raceOrderB.created.id, adminId],
+  )
+  await query(
+    `select public.admin_update_payment($1::uuid, 'pending', 'Solicitar nuevo reporte', $2::uuid)`,
+    [raceOrderB.created.id, adminId],
+  )
+  await query(
+    `select public.admin_update_payment($1::uuid, 'review', 'Revisión manual sin nuevo reporte', $2::uuid)`,
+    [raceOrderB.created.id, adminId],
+  )
+  await expectError(
+    `select public.admin_update_payment($1::uuid, 'paid', 'Reintento de aprobación', $2::uuid)`,
+    [raceOrderB.created.id, adminId],
+    '22023',
+    'un reporte rechazado no se puede aprobar en un reintento administrativo',
+  )
+  await query(
+    `select public.submit_public_payment_report($1, $2, 'REF-RACE-B2', '', 10000, 'VES', current_date, '123e4567-e89b-12d3-a456-426614174003.pdf')`,
+    [raceOrderB.created.code, createHash('sha256').update('competing-order-b').digest('hex')],
   )
   const [racePaidB] = await query(
     `select public.admin_update_payment($1::uuid, 'paid', 'Prueba autorizada', $2::uuid) as result`,
@@ -432,13 +565,29 @@ try {
       and tablename in (
         'orders', 'order_items', 'payment_attempts', 'audit_events', 'admin_users',
         'whatsapp_conversations', 'whatsapp_outbound_messages', 'whatsapp_handoffs',
-        'payment_methods', 'whatsapp_purchase_contexts'
+        'payment_methods', 'whatsapp_purchase_contexts', 'bcv_rate_cache'
       )
   `)
   ok(
-    sensitive.length === 10 && sensitive.every((table) => table.rowsecurity),
+    sensitive.length === 11 && sensitive.every((table) => table.rowsecurity),
     'RLS activo en tablas sensibles',
   )
+
+  const [reportPrivileges] = await query(`
+    select
+      has_function_privilege('anon', 'public.submit_public_payment_report(text,text,text,text,bigint,text,date,text)', 'EXECUTE') as anon_report,
+      has_function_privilege('authenticated', 'public.submit_public_payment_report(text,text,text,text,bigint,text,date,text)', 'EXECUTE') as auth_report,
+      has_function_privilege('service_role', 'public.submit_public_payment_report(text,text,text,text,bigint,text,date,text)', 'EXECUTE') as service_report
+  `)
+  ok(
+    reportPrivileges.anon_report === false,
+    'anon no puede invocar directamente el registro del reporte',
+  )
+  ok(
+    reportPrivileges.auth_report === false,
+    'authenticated tampoco puede saltarse la Edge Function',
+  )
+  ok(reportPrivileges.service_report === true, 'solo la Edge Function puede guardar reportes')
 
   const [privileges] = await query(`
     select

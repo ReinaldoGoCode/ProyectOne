@@ -23,7 +23,7 @@ Deno.serve(async (request) => {
     }
 
     const client = getServiceClient()
-    const { data: quote, error: quoteError } = await client.rpc('issue_demo_quote')
+    const { data: quote, error: quoteError } = await client.rpc('issue_bcv_quote')
     if (
       quoteError ||
       !isRecord(quote) ||
@@ -31,7 +31,12 @@ Deno.serve(async (request) => {
       !UUID.test(quote['id'])
     ) {
       console.error('checkout-quote rate failed', { code: quoteError?.code ?? 'invalid_quote' })
-      return json(request, 503, { error: 'No se pudo consultar la tasa de demostración.' })
+      return json(request, 503, {
+        error:
+          quoteError?.code === 'P0003'
+            ? 'No hay una tasa BCV validada y vigente para cotizar en bolívares. El pedido no se creó.'
+            : 'No se pudo consultar la tasa BCV. El pedido no se creó.',
+      })
     }
     const { data, error } = await client.rpc('preview_public_order', {
       p_items: items.map((line) => ({ variant_id: line.variantId, quantity: line.quantity })),

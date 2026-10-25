@@ -1,14 +1,16 @@
+import {
+  corsAllowOrigin,
+  isOriginAllowed as isRequestOriginAllowed,
+  parseOriginAllowlist,
+} from '../../../src/domain/originAllowlist.ts'
+
 export function corsHeaders(request: Request): HeadersInit {
-  const configuredOrigin = Deno.env.get('ALLOWED_ORIGIN')?.trim()
   const requestOrigin = request.headers.get('origin')
-  const allowOrigin = configuredOrigin
-    ? requestOrigin === configuredOrigin
-      ? configuredOrigin
-      : 'null'
-    : '*'
+  const allowedOrigins = parseOriginAllowlist(Deno.env.get('ALLOWED_ORIGIN'))
   return {
-    'Access-Control-Allow-Origin': allowOrigin,
-    'Access-Control-Allow-Headers': 'authorization, apikey, content-type, x-hub-signature-256',
+    'Access-Control-Allow-Origin': corsAllowOrigin(requestOrigin, allowedOrigins),
+    'Access-Control-Allow-Headers':
+      'authorization, apikey, content-type, x-client-info, x-hub-signature-256',
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
     'Content-Type': 'application/json; charset=utf-8',
     Vary: 'Origin',
@@ -20,8 +22,8 @@ export function json(request: Request, status: number, body: unknown): Response 
 }
 
 export function isAllowedOrigin(request: Request): boolean {
-  const configuredOrigin = Deno.env.get('ALLOWED_ORIGIN')?.trim()
-  return !configuredOrigin || request.headers.get('origin') === configuredOrigin
+  const allowedOrigins = parseOriginAllowlist(Deno.env.get('ALLOWED_ORIGIN'))
+  return isRequestOriginAllowed(request.headers.get('origin'), allowedOrigins)
 }
 
 export async function sha256Hex(value: string): Promise<string> {

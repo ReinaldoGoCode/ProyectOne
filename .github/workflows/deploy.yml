@@ -1,4 +1,4 @@
-name: Desplegar en GitHub Pages
+name: Verificar Norte Moda
 
 on:
   push:
@@ -7,16 +7,14 @@ on:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 concurrency:
-  group: pages
+  group: checks-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  construir:
-    name: Verificar y construir
+  verificar:
+    name: Verificar y construir para Netlify
     runs-on: ubuntu-latest
     steps:
       - name: Descargar el repositorio
@@ -48,29 +46,9 @@ jobs:
       - name: Construir el sitio
         run: pnpm build
         env:
-          VITE_BASE_PATH: /ProyectOne/
+          VITE_BASE_PATH: /
           # La clave publishable es pública y se usa solo desde el navegador.
           # Las claves secretas del backend nunca entran en este build.
           VITE_SUPABASE_URL: https://ctnpisuizfhxcuxrjhah.supabase.co
           VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_AJYvJHSmKJ8_RYymY1IR1Q_-_UJh1d2
           VITE_STORE_WHATSAPP_NUMBER: '584142351183'
-
-      - name: Copiar index.html como 404 para las rutas del cliente
-        run: cp dist/index.html dist/404.html
-
-      - name: Preparar artefacto de Pages
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: dist
-
-  desplegar:
-    name: Publicar
-    needs: construir
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - name: Desplegar en Pages
-        id: deployment
-        uses: actions/deploy-pages@v4

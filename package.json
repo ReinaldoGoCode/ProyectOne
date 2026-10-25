@@ -19,7 +19,7 @@
     "format:check": "prettier --check .",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:db": "node scripts/verify-database.mjs",
+    "test:db": "node --max-old-space-size=4096 --no-wasm-tier-up --wasm-max-committed-code-mb=1024 --wasm-max-code-space-size-mb=512 scripts/verify-database.mjs",
     "check": "tsc --noEmit && eslint src vite.config.ts --max-warnings=0 && vitest run",
     "supabase:seed": "node scripts/export-supabase-seed.mjs",
     "supabase:start": "supabase start",

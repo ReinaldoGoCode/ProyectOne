@@ -5,7 +5,7 @@ import { useCart } from '@/app/providers/cartContext'
 import { ProductArtwork } from '@/components/ui/ProductArtwork'
 import { WhatsAppActions } from '@/components/ui/WhatsAppActions'
 import { buttonClassName } from '@/components/ui/button'
-import { formatMoney } from '@/domain/money'
+import { DualCurrencyPrice } from '@/components/ui/DualCurrencyPrice'
 import {
   findFirstAvailableSelection,
   getAvailableSizesForColor,
@@ -286,7 +286,10 @@ export function ProductDetail({ product, catalog }: ProductDetailProps) {
             {product.name}
           </h1>
 
-          <p className="mt-4 text-xl font-medium tabular-nums">{formatMoney(product.priceCents)}</p>
+          <DualCurrencyPrice
+            cents={product.priceCents}
+            className="mt-4 items-start text-xl font-medium tabular-nums"
+          />
 
           <p className="mt-5 max-w-prose text-base leading-relaxed text-stone-600">
             {product.description}

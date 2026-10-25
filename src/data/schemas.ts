@@ -74,7 +74,7 @@ const inventoryMovementSchema = z.object({
   reason: z.enum(['receipt', 'sale', 'adjustment', 'import']),
   note: z.string().nullable(),
   orderId: z.string().nullable(),
-  createdAt: z.iso.datetime(),
+  createdAt: z.iso.datetime({ offset: true }),
 })
 
 export const catalogSchema = z
@@ -186,8 +186,11 @@ const orderStatusEventSchema = z.discriminatedUnion('axis', [
 const exchangeQuoteSchema = z.object({
   vesPerUsd: z.string().regex(/^(?:0|[1-9]\d*)(?:\.\d{1,6})?$/),
   source: z.enum(['demo_ficticia', 'bcv']),
-  quotedAt: z.iso.datetime(),
-  expiresAt: z.iso.datetime(),
+  quotedAt: z.iso.datetime({ offset: true }),
+  expiresAt: z.iso.datetime({ offset: true }),
+  effectiveDate: z.iso.date().optional(),
+  sourceUrl: z.url().optional(),
+  retrievedAt: z.iso.datetime({ offset: true }).optional(),
 })
 
 export const orderSchema = z

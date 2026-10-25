@@ -7,10 +7,12 @@ Deno.serve(async (request) => {
 
   try {
     const client = getServiceClient()
-    const { data, error } = await client.rpc('issue_demo_quote')
+    const { data, error } = await client.rpc('issue_bcv_quote')
     if (error || !data) {
-      console.error('demo-quote failed', { code: error?.code ?? 'empty_result' })
-      return json(request, 503, { error: 'No se pudo generar la tasa de demostración.' })
+      console.error('legacy demo-quote endpoint failed', { code: error?.code ?? 'empty_result' })
+      return json(request, 503, {
+        error: 'No hay una tasa BCV validada y vigente para cotizar en bolívares.',
+      })
     }
     return json(request, 200, { quote: data })
   } catch {

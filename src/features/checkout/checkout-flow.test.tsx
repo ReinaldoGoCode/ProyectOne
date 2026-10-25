@@ -118,7 +118,7 @@ describe('flujo de compra y acceso administrativo', () => {
     fireEvent.change(screen.getByLabelText('Número de referencia'), {
       target: { value: 'REF-12345' },
     })
-    fireEvent.click(screen.getByRole('button', { name: 'Enviar a revisión' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Reportar pago para revisión' }))
 
     expect(await screen.findByText(/Referencia guardada en este navegador/)).toBeTruthy()
     expect(screen.getByText(/Referencia informada:/)).toBeTruthy()
